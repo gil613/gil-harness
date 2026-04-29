@@ -1,10 +1,10 @@
 {
   "name": "harness",
-  "description": "범용 프로젝트 에이전트 하네스 — 요구사항 수집부터 코드 리뷰까지 단계별 AI 워크플로우",
   "version": "0.2.0",
+  "description": "범용 프로젝트 에이전트 하네스 — 요구사항 수집부터 코드 리뷰까지 단계별 AI 워크플로우",
   "author": {
     "name": "gil613"
   },
-  "repository": "https://github.com/gil613/gil-harness.git",
+  "repository": "https://github.com/gil613/gil-harness",
   "commands": ["./commands/"]
 }
