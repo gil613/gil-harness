@@ -127,6 +127,8 @@ Max stage retries:  3
 
 - `.harness/logs/` — 결정론 검증 로그 보관소 (`/harness:validate`가 첫 실행 시 사용)
 
+`mkdir` 호출 시 반드시 상대경로 사용 (예: `mkdir -p .harness/logs`). Bash에서 `\`는 이스케이프 문자이므로 `C:\...` 같은 Windows 절대경로를 사용하면 경로 구분자가 모두 사라져 잘못된 이름의 디렉터리가 생성된다.
+
 산출물 파일(`requirements.md`, `roadmap.md`, `progress.md`, `review-report.md`)과 `retrospectives/`, `agents-overrides/`는 만들지 않는다 — 각 스테이지/회고가 필요 시 직접 만든다.
 
 ### 6. 완료 보고

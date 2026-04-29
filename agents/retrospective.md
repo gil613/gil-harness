@@ -84,7 +84,7 @@ If analysis reveals an agent that needs improvement, **modify it directly with t
 
 Modification target priority:
 
-1. **`.harness/agents-overrides/<agent>.md`** — user project local override. Create directory if missing, then add.
+1. **`.harness/agents-overrides/<agent>.md`** — user project local override. If the directory is missing, create it with `mkdir -p .harness/agents-overrides` (relative path — never use Windows absolute paths like `C:\...` in Bash), then add.
 2. Plugin's `agents/<agent>.md` — **only when the user has explicitly agreed**.
 
 ### Modification Rules

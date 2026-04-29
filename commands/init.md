@@ -114,6 +114,8 @@ Set `uiLanguage` to the value selected in step 1 (`"ko"` or `"en"`).
 
 - `.harness/logs/` — deterministic validation log storage (used by `/harness:validate` on first run)
 
+Use relative paths when calling `mkdir` (e.g., `mkdir -p .harness/logs`). Never use Windows absolute paths (`C:\...`) in Bash commands — backslashes are escape characters in bash and will corrupt the path into a single malformed directory name.
+
 Do not create artifact files (`requirements.md`, `roadmap.md`, `progress.md`, `review-report.md`), `retrospectives/`, or `agents-overrides/` — each stage and retrospective creates them as needed.
 
 ### 6. Completion report
