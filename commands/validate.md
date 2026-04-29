@@ -133,11 +133,18 @@ REVIEW: requirements.md, roadmap.md, review-report.md
 
 ```
 [ko] 검증 통과: <이전 stage> -> <다음 stage>
-     다음: /harness:run    (또는 DONE이면 /harness:retro)
 
 [en] Validation passed: <prev stage> -> <next stage>
-     Next: /harness:run    (or /harness:retro if DONE)
 ```
+
+단독 실행(`/harness:validate` 직접 호출)인 경우에만 추가 힌트 출력:
+
+```
+[ko] 다음: /harness:run    (또는 DONE이면 /harness:retro)
+[en] Next: /harness:run    (or /harness:retro if DONE)
+```
+
+`/harness:run` 루프 안에서 인라인으로 호출된 경우 이 힌트는 생략한다 — run이 자동으로 루프를 이어간다.
 
 ### 5b. FAIL 처리
 

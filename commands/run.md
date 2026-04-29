@@ -1,34 +1,50 @@
 ---
-description: 현재 스테이지의 작업 에이전트 실행 (자동으로 검증까지)
+description: DONE 또는 재시도 한계까지 전 스테이지 자동 실행
 allowed-tools: Read, Edit, Write, Bash, Glob, Grep, Task
 ---
 
 # /harness:run
 
-현재 스테이지에 맞는 워커 서브에이전트를 호출해 작업을 진행한다. 작업이 끝나면 검증 단계로 이어진다.
+**자동 루프**: DONE에 도달하거나 재시도 한계를 초과할 때까지 스테이지를 순차적으로 실행한다. 수동 개입 불필요.
 
-## 절차
+루프 순서: REQUIREMENTS → ROADMAP → DEVELOPMENT → REVIEW → DONE
 
-### 1. 상태 로드
+---
+
+## 루프 절차
+
+다음 절차를 **DONE 도달 또는 중단 조건 발생까지 반복**한다.
+
+---
+
+### LOOP-1. 상태 로드
 
 - `.harness/state.json`, `.harness/config.json` 읽기
-- `state.stage === 'DONE'`이면 ko: "완료. /harness:retro 권장" / en: "Done. /harness:retro recommended" 출력 후 종료
-- `state.iteration >= state.maxRetries`이면 ko: "재시도 한계 도달 — /harness:reset 후 재시도" / en: "Retry limit reached — reset with /harness:reset and retry" 출력 후 종료
+- `state.stage === 'DONE'`이면 출력 후 루프 종료:
+  - ko: "모든 스테이지 완료. /harness:retro 권장"
+  - en: "All stages complete. /harness:retro recommended"
+- `state.iteration >= state.maxRetries`이면 출력 후 루프 종료:
+  - ko: "재시도 한계 도달 — 에이전트 지침 또는 요구사항 수정 후 /harness:reset"
+  - en: "Retry limit reached — modify agent instructions or requirements, then /harness:reset"
 
 이후 모든 출력은 `config.uiLanguage`에 따라 한국어 또는 영어로 표시한다.
 
-### 2. 이전 실패 인지 (있으면)
+---
 
-`state.failures`의 마지막 항목이 현재 스테이지와 일치하면 본인(부모 세션)에게 명시적으로 출력:
+### LOOP-2. 이전 실패 인지 (있으면)
+
+`state.failures`의 마지막 항목이 현재 스테이지와 일치하면 출력:
 
 ```
 이전 실패 원인: <cause>
 수정 계획:     <plan>
 ```
 
-이 정보는 서브에이전트에게도 전달한다.
+이 정보는 워커 서브에이전트에게도 전달한다 (LOOP-3).
 
-### 3. 워커 서브에이전트 호출
+---
+
+### LOOP-3. 워커 서브에이전트 호출
 
 `config.uiLanguage`를 확인해 서브에이전트를 결정한다. `"en"`이면 `-en` 접미사 에이전트를 사용한다.
 
@@ -41,15 +57,15 @@ stage → 서브에이전트 매핑:
 | DEVELOPMENT | developer | developer-en |
 | REVIEW | reviewer | reviewer-en |
 
-`config.uiLanguage`가 없거나 `"ko"`이면 기존 한국어 에이전트 사용.
+`config.uiLanguage`가 없거나 `"ko"`이면 한국어 에이전트 사용.
 
-#### 3-1. 오버라이드 로드
+#### 오버라이드 로드
 
-`.harness/agents-overrides/<subagent_type>.md` 파일이 존재하면 Read로 읽어둔다. 없으면 빈 문자열로 처리. 이 내용은 Task 프롬프트의 `[오버라이드]` 블록에 그대로 인라인된다 — 회고가 만든 프로젝트 로컬 지침이 실제로 적용되는 유일한 경로.
+`.harness/agents-overrides/<subagent_type>.md` 파일이 존재하면 Read로 읽어둔다. 없으면 빈 문자열.
 
-#### 3-2. Task 프롬프트 템플릿
+#### Task 프롬프트 템플릿
 
-`Task` 도구로 호출. 프롬프트는 아래 구조를 그대로 사용 (해당 없는 블록은 통째로 생략):
+`Task` 도구로 호출. 해당 없는 블록은 통째로 생략:
 
 ```
 [STAGE]
@@ -77,15 +93,55 @@ REVIEW: requirements.md, roadmap.md, progress.md
 끝나면 한 줄로 보고하라.
 ```
 
-### 4. 검증으로 위임
+#### 워커 실패 처리
 
-서브에이전트가 정상 종료하면 즉시 `/harness:validate`를 실행한다 (이 명령 안에서 validate.md의 절차를 그대로 따른다).
-
-서브에이전트가 실패/abort하면 검증으로 진행하지 않고 사용자에게 보고:
+서브에이전트가 실패/abort하면 state를 변경하지 않고 루프 중단:
 
 ```
-워커 에이전트 실패: <원인>
-재시도하려면 /harness:run 다시 실행
+[ko] 워커 에이전트 실패: <원인>
+     재시도하려면 /harness:run 다시 실행
+
+[en] Worker agent failed: <reason>
+     Re-run /harness:run to retry
 ```
 
-state는 변경하지 않는다 (검증을 거치지 않은 실패는 iteration 카운터에 반영하지 않음 — runtime 오류와 검증 실패를 구분).
+(runtime 오류와 검증 실패 구분 — iteration 카운터 증가 없음)
+
+---
+
+### LOOP-4. 검증 실행 (validate.md 절차 인라인)
+
+워커가 정상 종료했으면 `validate.md`의 절차를 **이 세션 안에서 그대로 실행**한다.
+
+validate.md 절차 전체를 인라인으로 수행 후 PASS / FAIL 결과를 내부 변수로 보유한다.
+
+---
+
+### LOOP-5. 루프 분기
+
+validate 결과와 갱신된 state를 기준으로 분기한다.
+
+#### 5a. PASS
+
+`state.json`이 이미 다음 스테이지로 갱신되어 있다. 상태를 다시 읽는다.
+
+- 새 `state.stage === 'DONE'`이면:
+  - ko: "✓ 전체 파이프라인 완료 (REQUIREMENTS→ROADMAP→DEVELOPMENT→REVIEW→DONE)\n   /harness:retro 실행 권장"
+  - en: "✓ Full pipeline complete (REQUIREMENTS→ROADMAP→DEVELOPMENT→REVIEW→DONE)\n   Run /harness:retro"
+  - 루프 종료
+- 아니면 진행 상황 한 줄 출력 후 **LOOP-1로 돌아간다**:
+  - ko: "✓ <이전 stage> 완료 → <새 stage> 시작"
+  - en: "✓ <prev stage> done → starting <new stage>"
+
+#### 5b. FAIL
+
+state.json의 `iteration`이 이미 +1 증가되어 있다.
+
+- `state.iteration < state.maxRetries`이면:
+  - ko: "✗ <stage> 검증 실패 (시도 <iteration>/<maxRetries>)\n   원인: <cause>\n   수정 계획: <plan>\n   → 동일 스테이지 재시도 중..."
+  - en: "✗ <stage> validation failed (attempt <iteration>/<maxRetries>)\n   Cause: <cause>\n   Fix plan: <plan>\n   → Retrying same stage..."
+  - **LOOP-1로 돌아간다** (state는 이미 갱신됨, 동일 stage 재실행)
+- `state.iteration >= state.maxRetries`이면:
+  - ko: "✗ <stage> 재시도 한계 도달 — 사용자 개입 필요\n   에이전트 지침(.harness/agents-overrides/) 또는 요구사항 수정 후\n   /harness:reset 으로 iteration 리셋"
+  - en: "✗ <stage> retry limit reached — user intervention required\n   Modify agent overrides (.harness/agents-overrides/) or requirements,\n   then reset with /harness:reset"
+  - 루프 종료

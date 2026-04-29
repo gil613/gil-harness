@@ -52,6 +52,7 @@ allowed-tools: Read, Edit, Write, Bash, Task, Glob
 수정 대상 화이트리스트:
 
 - `.harness/agents-overrides/*.md` (사용자 프로젝트 로컬 오버라이드)
+- `docs/agent-system-prompt/base.md` (모든 에이전트 공통 지침 — 사용자 명시적 동의 시에만)
 - 플러그인 본체의 `agents/*.md`는 사용자가 명시적으로 동의한 경우에만
 
 수정 대상 외의 파일을 수정하려고 하면 거부. `.env`, `secrets/`, 임의 코드 파일은 절대 수정하지 않는다.

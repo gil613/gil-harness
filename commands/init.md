@@ -129,86 +129,6 @@ Max stage retries:  3
 
 산출물 파일(`requirements.md`, `roadmap.md`, `progress.md`, `review-report.md`)과 `retrospectives/`, `agents-overrides/`는 만들지 않는다 — 각 스테이지/회고가 필요 시 직접 만든다.
 
-**`CLAUDE.md`** (프로젝트 루트, **이미 있으면 건드리지 않음** — 사용자 제어 텍스트는 간접 프롬프트 인젝션 벡터):
-
-`uiLanguage === "en"` 이면 영문 템플릿, 아니면 한국어 템플릿을 사용한다.
-
-**한국어 템플릿**:
-```markdown
-# [PROJECT_NAME] 하네스
-
-이 프로젝트는 Claude Code 하네스 플러그인으로 관리된다.
-
-## 워크플로우
-
-```
-REQUIREMENTS → ROADMAP → DEVELOPMENT → REVIEW → DONE
-```
-
-각 스테이지는 전용 서브에이전트가 작업하고 검증 에이전트가 산출물을 심사한다.
-
-## 사용법
-
-- `/harness:status` — 현재 진행 상태
-- `/harness:run` — 현재 스테이지 작업 진행
-- `/harness:validate` — 검증 게이트 통과 여부 판정
-- `/harness:advance` — 검증 생략하고 강제 다음 스테이지 (긴급용)
-- `/harness:reset` — iteration/failures 리셋 (maxRetries 초과 후 재시도)
-- `/harness:retro` — 회고 + 에이전트 지침 자동 개선
-
-## 상태 파일
-
-- `.harness/config.json` — 프로젝트 설정 (수정 가능)
-- `.harness/state.json` — 현재 상태 (직접 수정 금지, /harness:reset 사용)
-- `.harness/{requirements,roadmap,progress,review-report}.md` — 스테이지 산출물
-- `.harness/retrospectives/YYYY-MM-DD.md` — 회고 기록
-
-## 핵심 원칙
-
-- 각 스테이지는 명확한 산출물이 있다 — 산출물 없이 완료 선언 금지
-- 사용자가 언급하지 않은 것은 임의로 추가하지 않는다
-- 실패 원인은 `.harness/state.json` failures 배열에 자동 기록된다
-- 세션 시작 시 failures 배열을 확인해 이전 실패 원인을 인지하고 시작
-```
-
-**English template**:
-```markdown
-# [PROJECT_NAME] Harness
-
-This project is managed by the Claude Code harness plugin.
-
-## Workflow
-
-```
-REQUIREMENTS → ROADMAP → DEVELOPMENT → REVIEW → DONE
-```
-
-Each stage is handled by a dedicated sub-agent, and a validator agent reviews the output.
-
-## Commands
-
-- `/harness:status` — current progress
-- `/harness:run` — run the current stage
-- `/harness:validate` — check if the validation gate passes
-- `/harness:advance` — force advance to the next stage without validation (emergency)
-- `/harness:reset` — reset iteration/failures (retry after hitting maxRetries)
-- `/harness:retro` — retrospective + automatic agent instruction improvement
-
-## State Files
-
-- `.harness/config.json` — project settings (editable)
-- `.harness/state.json` — current state (do not edit directly, use /harness:reset)
-- `.harness/{requirements,roadmap,progress,review-report}.md` — stage outputs
-- `.harness/retrospectives/YYYY-MM-DD.md` — retrospective records
-
-## Core Principles
-
-- Each stage has a clear output — never declare completion without output
-- Do not add anything the user has not mentioned
-- Failure causes are automatically recorded in the `.harness/state.json` failures array
-- At session start, check the failures array to be aware of previous failure causes
-```
-
 ### 6. 완료 보고
 
 `uiLanguage === "en"` 이면 영문으로, 아니면 한국어로 출력한다.
@@ -220,7 +140,6 @@ Each stage is handled by a dedicated sub-agent, and a validator agent reviews th
 생성된 파일:
   .harness/config.json
   .harness/state.json
-  CLAUDE.md (또는 추가됨)
 
 다음 단계:
   /harness:status   현재 상태 확인
@@ -234,7 +153,6 @@ Initialized: <projectName>
 Files created:
   .harness/config.json
   .harness/state.json
-  CLAUDE.md (or appended)
 
 Next steps:
   /harness:status   check current status
