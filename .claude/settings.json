@@ -1,7 +1,24 @@
 {
   "permissions": {
     "allow": [
+      "Bash(git status*)",
+      "Bash(git log*)",
+      "Bash(git diff*)",
+      "Bash(git show*)",
+      "Bash(ls*)",
+      "Bash(mkdir -p*)",
+      "Bash(npm*)",
+      "Bash(npx*)",
+      "Bash(yarn*)",
+      "Bash(pnpm*)",
       "Bash(python*)",
+      "Bash(pytest*)",
+      "Bash(ruff*)",
+      "Bash(mypy*)",
+      "Bash(cargo*)",
+      "Bash(go *)",
+      "Bash(./gradlew*)",
+      "Bash(mvn*)",
       "Write(*)"
     ]
   },
