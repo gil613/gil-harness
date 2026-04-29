@@ -24,11 +24,11 @@ REQUIREMENTS → ROADMAP → DEVELOPMENT → REVIEW → DONE
 
 ## 설치
 
-마켓플레이스를 추가하고 플러그인을 설치한다.
+터미널에서 CLI로 설치한다.
 
-```
-/plugin marketplace add https://raw.githubusercontent.com/gil613/gil-harness/main/.claude-plugin/marketplace.json
-/plugin install harness
+```bash
+claude plugin marketplace add gil613/gil-harness
+claude plugin install harness
 ```
 
 설치 후 `/harness:*` 슬래시 명령어가 활성화된다.
