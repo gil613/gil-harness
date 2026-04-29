@@ -1,3 +1,5 @@
+**[한국어](README.md)** | English
+
 # Harness
 
 A general-purpose project agent harness. A Claude Code plugin that you install in any project to have AI work through it step by step — from requirements gathering to code review.
