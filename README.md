@@ -27,7 +27,7 @@ REQUIREMENTS → ROADMAP → DEVELOPMENT → REVIEW → DONE
 마켓플레이스를 추가하고 플러그인을 설치한다.
 
 ```
-/plugin marketplace add https://raw.githubusercontent.com/gil613/gil-harness/main/marketplace.json
+/plugin marketplace add https://raw.githubusercontent.com/gil613/gil-harness/main/.claude-plugin/marketplace.json
 /plugin install harness
 ```
 
