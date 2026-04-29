@@ -1,9 +1,8 @@
 {
-  "owner": {
-    "name": "gil613",
-    "url": "https://github.com/gil613"
-  },
   "name": "harness-marketplace",
+  "owner": {
+    "name": "gil613"
+  },
   "description": "Harness 에이전트 워크플로우 플러그인",
   "plugins": [
     {
