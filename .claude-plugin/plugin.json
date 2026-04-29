@@ -5,5 +5,9 @@
   "author": {
     "name": "gil613"
   },
-  "repository": "https://github.com/gil613/gil-harness.git"
+  "repository": "https://github.com/gil613/gil-harness.git",
+  "install": {
+    "script": "install.sh",
+    "creates": [".harness/agents", ".harness/commands"]
+  }
 }
