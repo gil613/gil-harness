@@ -12,6 +12,8 @@
 
 # 문서 구조 (System of Record)
 - `CLAUDE.md` — 목차 (이 파일, ~100줄)
+- `docs/agent-system-prompt/base.md` — 하네스 에이전트 공통 지침 (하네스 코드가 주입)
+- `docs/agent-system-prompt/roles/` — 역할별 추가 지침
 - `docs/research/` — 리서치 자료 (예: `harness-engineering.md`)
 - `docs/design-docs/` — 설계 문서 (`index.md` 진입점)
 - `docs/exec-plans/active/` · `completed/` — 실행 계획 + 의사결정 로그
@@ -28,12 +30,8 @@
 - 깨끗한(merge-ready) 상태로만 세션 종료
 
 # 컨텍스트 관리
-- Compaction — 한계 시 요약 후 진행
-- Tool call offloading — 대용량 출력은 파일로, 컨텍스트엔 앞뒤만
 - `SKILL.md` — 반복 작업 절차 문서화, 필요 시점에만 컨텍스트 로드 (progressive disclosure)
-- "성공은 조용히, 실패만 시끄럽게" — 통과 출력으로 범람 금지
-- 서브 에이전트 = 컨텍스트 방화벽 (탐색·구현 노이즈 흡수, 결과만 전달)
-- 상위 세션 = Opus, 서브 에이전트 = Sonnet/Haiku (좁은 작업은 약한 모델로 충분)
+- 에이전트 런타임 컨텍스트 관리 원칙 → `docs/agent-system-prompt/base.md`
 
 # 세션 워크플로우 (Coding Agent)
 1. `pwd` 확인
@@ -46,11 +44,8 @@
 8. merge-ready 상태로 종료
 
 # 작업 분해
-- 한 번에 하나의 기능 — one-shot 시도 / 조기 완료 선언 금지
-- 수직 슬라이스(end-to-end) > 수평 레이어
-- Wave 기반 병렬 — 독립 계획만 같은 웨이브, 의존은 다음 웨이브
-- 파일 충돌 → 순차 처리
 - XML 작업 정의: `<task><name><files><action><verify><done>`
+- 에이전트 런타임 작업 분해 원칙 → `docs/agent-system-prompt/base.md`
 
 # 커밋 규칙
 - 원자적 커밋 (기능 단위 독립 revert 가능)
@@ -69,28 +64,24 @@
 - 두 축: **Guides**(사전 차단: 린터·타입체크·deny 룰) + **Sensors**(사후 관찰: 테스트·로그·모니터링)
 - 두 종류: **Computational**(결정론적, 빠름) + **Inferential**(LLM 기반 의미 분석, 코드 리뷰 에이전트)
 - Quality Left — 빠른 검사는 pre-commit, 비싼 검사는 통합 후
-- 작업 종료 시 typecheck / 테스트 / 린터 자동 실행 (훅)
 - **린터 에러 메시지에 수정 지침을 직접 주입**
 - Durability — 50~100 tool call 이후 instruction 추종 여부가 핵심 지표
-- 브라우저 검증 (Puppeteer / CDP) — DOM 스냅샷·스크린샷·네비게이션
 - 관찰 가능성 — LogQL / PromQL / TraceQL
 - worktree별 ephemeral 스택 (작업 끝나면 삭제)
 - PR 검토는 점진적으로 에이전트 간 처리로 전환 — 인간 취향은 린터·문서·골든 룰로 인코딩
+- 에이전트 런타임 검증 절차 → `docs/agent-system-prompt/base.md`
 
 # 도구 사용 (MCP / CLI)
 - MCP는 **필요한 것만** — 도구 정의 자체가 토큰
-- 학습 데이터에 충분한 도구(GitHub / Docker / DB / git)는 CLI 직접 호출
-- 거대 컨트롤 플로우 ❌, atomic tool + guardrail/retry/verification ✅
-- 샌드박스 — bash·코드 실행은 격리 환경 + 허용 명령 + 네트워크 제한, on-demand 생성·폐기
 - "지루한" 기술 선호 — 학습 데이터 풍부 + API 안정 → 외부 라이브러리보다 재구현이 쌀 때도
 - Vercel 사례: 도구 80% 제거 → 적은 스텝, 빠른 응답
+- 에이전트 런타임 도구 사용 원칙 → `docs/agent-system-prompt/base.md`
 
 # 보안
 - 민감 파일 deny: `.env`, `.env.*`, `**/secrets/*`, `**/*credential*`, `**/*.pem`, `**/*.key`
-- 에이전트가 쓰는 마크다운/기획 아티팩트가 다음 세션 시스템 프롬프트가 됨 → 사용자 제어 텍스트 = **간접 프롬프트 인젝션 벡터**
 - PreToolUse 가드 훅으로 마크다운 작성 전 인젝션 스캔
-- 경로 순회 / 셸 인수 / JSON 파싱 / CI 워크플로우 모두 검증
 - `permissions.allow` 세분화 — 자동화 마찰 제거하되 deny 우선
+- 에이전트 런타임 보안 원칙 → `docs/agent-system-prompt/base.md`
 
 # 엔트로피 관리
 - Golden Principles는 repo에 **코드로** 인코딩 (문서 의존 ❌)
