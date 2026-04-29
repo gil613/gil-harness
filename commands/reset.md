@@ -1,64 +1,55 @@
 ---
-description: iteration/failures 리셋 (maxRetries 초과 후 재시도용)
+description: Reset iteration/failures (for retrying after maxRetries is exceeded)
 allowed-tools: Read, Edit
 argument-hint: "[--iteration|--failures|--all]"
 ---
 
 # /harness:reset
 
-검증 재시도가 한계에 도달했을 때, 에이전트 지침이나 요구사항을 수정한 후 이 명령으로 카운터를 리셋해 재시도할 수 있게 한다.
+When the validation retry limit has been reached, use this command to reset the counters after modifying agent instructions or requirements, enabling a retry.
 
-## 인수
+## Arguments
 
-- `--iteration` (기본): `iteration`만 0으로 리셋
-- `--failures`: `failures` 배열 비우기
-- `--all`: iteration + failures 모두 리셋
-- `--stage <STAGE>`: 추가 옵션 — 특정 스테이지로 강제 이동 (위험, 명시적 확인 필요)
+- `--iteration` (default): reset `iteration` to 0 only
+- `--failures`: clear the `failures` array
+- `--all`: reset both iteration and failures
+- `--stage <STAGE>`: additional option — force move to a specific stage (dangerous, requires explicit confirmation)
 
-인수 없으면 `--iteration --failures` 둘 다 리셋(가장 흔한 케이스).
+If no argument is provided, both `--iteration` and `--failures` are reset (the most common case).
 
-## 절차
+## Procedure
 
-### 1. state.json 읽기
+### 1. Read state.json
 
-`.harness/config.json`을 먼저 읽어 `uiLanguage`를 확인한다. 없거나 `"ko"`이면 한국어.
+Read `.harness/config.json` first to check `uiLanguage`. If missing or `"ko"`, use Korean.
 
-`.harness/state.json` 없으면 ko: "초기화 필요" / en: "Not initialized" 후 종료.
+If `.harness/state.json` is missing: print "Not initialized" and exit.
 
-### 2. 사용자 확인 (--stage 사용 시에만)
+### 2. User confirmation (only when --stage is used)
 
-`--stage` 인수가 있으면 명시적으로 한 번 더 확인:
+If `--stage` argument is present, ask for explicit confirmation one more time:
 
-**ko**: > 스테이지를 <X>로 강제 변경합니다. 산출물과 history는 보존됩니다. 진행할까요? (yes/no)
-**en**: > Force-changing stage to <X>. Outputs and history will be preserved. Continue? (yes/no)
+> Force-changing stage to <X>. Outputs and history will be preserved. Continue? (yes/no)
 
-### 3. Edit으로 state.json 갱신
+### 3. Update state.json with Edit
 
-기본(인수 없음 또는 `--iteration` + `--failures`):
+Default (no argument or `--iteration` + `--failures`):
 
 ```diff
-- "iteration": <기존값>,
+- "iteration": <old value>,
 + "iteration": 0,
 - "failures": [...],
 + "failures": [],
 ```
 
-`--all`은 위와 동일.
+`--all` is identical to the above.
 
-`--stage <STAGE>` 추가 시 `stage` 필드도 함께 갱신.
+If `--stage <STAGE>` is also provided, update the `stage` field as well.
 
-`schemaVersion`, `maxRetries`, `lastValidated`, `history`는 절대 건드리지 않는다.
+Never touch `schemaVersion`, `maxRetries`, `lastValidated`, or `history`.
 
-### 4. 출력
+### 4. Output
 
-**ko**:
-```
-리셋 완료: iteration=0, failures=[]
-현재 스테이지: <stage>
-다음: /harness:run
-```
-
-**en**:
 ```
 Reset complete: iteration=0, failures=[]
 Current stage: <stage>

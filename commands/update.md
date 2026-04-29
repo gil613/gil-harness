@@ -1,71 +1,63 @@
 ---
-description: 플러그인 업데이트 내용을 현재 프로젝트에 적용
+description: Apply plugin update contents to the current project
 allowed-tools: Read, Edit, Write, Bash, Glob
 ---
 
 # /harness:update
 
-플러그인 본체(commands/, agents/)가 새 버전으로 업데이트됐을 때, 이미 초기화된 프로젝트의 파일들을 현재 버전에 맞게 동기화한다.
+Run this after updating the plugin (`claude plugin update harness` or `git pull`) to synchronize already-initialized project files with the current version.
 
-업데이트 대상:
-- `.harness/config.json` — 새 버전에서 추가된 필드 보완
-- `.harness/` 하위 디렉터리 — 새 버전이 요구하는 디렉터리 생성
+What gets updated:
+- `.harness/config.json` — fill in fields added in the new version
+- `.harness/` subdirectories — create any directories required by the new version
 
-건드리지 않는 것:
-- `.harness/state.json` (진행 상태)
-- `.harness/*.md` 산출물 (requirements, roadmap, progress, review-report)
+What is never touched:
+- `.harness/state.json` (progress state)
+- `.harness/*.md` artifacts (requirements, roadmap, progress, review-report)
 - `.harness/retrospectives/`
 - `.harness/agents-overrides/`
 
-## 절차
+## Procedure
 
-### 1. 초기화 여부 확인
+### 1. Check initialization
 
-`.harness/config.json`, `.harness/state.json`을 읽는다. 없으면 출력 후 종료:
-- ko: "초기화 필요 — 먼저 /harness:init 실행"
-- en: "Not initialized — run /harness:init first"
+Read `.harness/config.json` and `.harness/state.json`. If missing, print and exit:
 
-`uiLanguage`를 확인해 이후 모든 출력 언어를 결정한다.
+"Not initialized — run /harness:init first"
 
-### 2. config.json 스키마 보완
+Read `uiLanguage` to determine the output language for all subsequent output.
 
-현재 `config.json`에 없는 필드를 감지해 추가한다. **기존 필드는 절대 덮어쓰지 않는다.**
+### 2. Patch config.json schema
 
-현재 스키마 기준 필수 필드:
+Detect fields missing from the current `config.json` and add them. **Never overwrite existing fields.**
+
+Required fields based on the current schema:
 
 ```
 projectName, language, uiLanguage,
 testCmd, lintCmd, typecheckCmd, buildCmd, devCmd
 ```
 
-누락 필드가 있으면:
-1. `init.md` 단계 3과 동일한 방법으로 프로젝트 파일 재스캔해 자동 감지 시도
-2. 감지 실패 시 빈 문자열(`""`)로 추가
+If fields are missing:
+1. Re-scan project files using the same method as `init.md` step 3 to auto-detect values
+2. If detection fails, add as empty string (`""`)
 
-Edit 도구로 누락 필드만 삽입한다.
+Use the Edit tool to insert only the missing fields.
 
-### 3. 디렉터리 보완
+### 3. Patch directories
 
-현재 버전이 요구하는 디렉터리가 없으면 생성한다:
+If directories required by the current version are missing, create them:
 
 ```bash
 mkdir -p .harness/logs
 ```
 
-추후 버전에서 새 디렉터리가 추가되면 이 목록에 추가한다.
+Add to this list when new directories are introduced in future versions.
 
-### 4. 완료 보고
+### 4. Completion report
 
-변경된 항목만 출력한다. 변경 없으면 "최신 상태"로 보고.
+Output only changed items. If nothing changed, report "already up to date".
 
-**ko**:
-```
-업데이트 완료:
-  config.json  — <추가된 필드 목록> (없으면 "변경 없음")
-  디렉터리     — <생성된 목록> (없으면 "변경 없음")
-```
-
-**en**:
 ```
 Update complete:
   config.json  — <added fields> (or "no changes")

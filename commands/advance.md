@@ -1,55 +1,53 @@
 ---
-description: 검증을 생략하고 다음 스테이지로 강제 이동 (긴급용)
+description: Force-advance to the next stage skipping validation (emergency use)
 allowed-tools: Read, Edit
 ---
 
 # /harness:advance
 
-현재 스테이지를 검증 없이 통과 처리하고 다음 스테이지로 이동한다. **긴급 상황에서만 사용**.
+Marks the current stage as passed without validation and moves to the next stage. **Use only in emergencies.**
 
-## 절차
+## Procedure
 
-### 1. 사용자 확인
+### 1. User confirmation
 
-`.harness/config.json`을 읽어 `uiLanguage`를 확인한 뒤 이후 모든 출력 언어를 결정한다. 없거나 `"ko"`이면 한국어.
+Read `.harness/config.json` to check `uiLanguage`, then determine the output language for all subsequent output. If missing or `"ko"`, use Korean.
 
-사용자에게 명시적으로 한 번 묻는다:
+Ask the user explicitly once:
 
-**ko**: > 검증을 생략하고 다음 스테이지로 강제 이동합니다. 진행할까요? (yes/no)
-**en**: > Skipping validation and force-advancing to the next stage. Continue? (yes/no)
+> Skipping validation and force-advancing to the next stage. Continue? (yes/no)
 
-`yes`/`y`가 아니면 중단.
+Stop if the answer is not `yes`/`y`.
 
-### 2. state.json 읽고 판정
+### 2. Read state.json and evaluate
 
-- `.harness/state.json` 없으면 ko: "초기화 필요" / en: "Not initialized" 후 종료
-- `state.stage === 'DONE'`이면 ko: "이미 마지막 스테이지" / en: "Already at the last stage" 후 종료
+- If `.harness/state.json` is missing: print "Not initialized" and exit
+- If `state.stage === 'DONE'`: print "Already at the last stage" and exit
 
-### 3. 다음 스테이지 계산
+### 3. Calculate next stage
 
 ```
 STAGES = ['REQUIREMENTS','ROADMAP','DEVELOPMENT','REVIEW','DONE']
 next = STAGES[STAGES.indexOf(state.stage) + 1]
 ```
 
-### 4. state.json 갱신 (Edit 도구)
+### 4. Update state.json (Edit tool)
 
-다음 필드를 갱신한다:
+Update the following fields:
 
 - `stage`: next
 - `iteration`: 0
-- `history`: 기존 배열에 다음 항목 append
+- `history`: append the following entry to the existing array
   ```json
   {
-    "stage": "<현재 stage>",
-    "completedAt": "<ISO 8601 현재 시각>",
+    "stage": "<current stage>",
+    "completedAt": "<current ISO 8601 time>",
     "skippedValidation": true
   }
   ```
 
-다른 필드(`failures`, `lastValidated`, `maxRetries`, `schemaVersion`)는 건드리지 않는다.
+Do not touch other fields (`failures`, `lastValidated`, `maxRetries`, `schemaVersion`).
 
-### 5. 출력
+### 5. Output
 
-**ko**: `<이전 stage> -> <next> (검증 생략)`
-**en**: `<prev stage> -> <next> (validation skipped)`
+`<prev stage> -> <next> (validation skipped)`

@@ -16,15 +16,6 @@
     "./agents/review-validator.md",
     "./agents/reviewer.md",
     "./agents/roadmap-designer.md",
-    "./agents/roadmap-validator.md",
-    "./agents/en/developer.md",
-    "./agents/en/development-validator.md",
-    "./agents/en/requirements-collector.md",
-    "./agents/en/requirements-validator.md",
-    "./agents/en/retrospective.md",
-    "./agents/en/review-validator.md",
-    "./agents/en/reviewer.md",
-    "./agents/en/roadmap-designer.md",
-    "./agents/en/roadmap-validator.md"
+    "./agents/roadmap-validator.md"
   ]
 }
