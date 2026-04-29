@@ -1,6 +1,6 @@
 # Harness
 
-범용 프로젝트 에이전트 하네스. 어떤 프로젝트에든 설치해 AI가 요구사항 수집부터 코드 리뷰까지 단계적으로 작업하도록 만드는 워크플로우 시스템이다.
+범용 프로젝트 에이전트 하네스. 어떤 프로젝트에든 설치해 AI가 요구사항 수집부터 코드 리뷰까지 단계적으로 작업하도록 만드는 Claude Code 플러그인이다.
 
 ## 개념
 
@@ -18,111 +18,87 @@ REQUIREMENTS → ROADMAP → DEVELOPMENT → REVIEW → DONE
    [검증 게이트]  [검증 게이트] [검증 게이트] [검증 게이트]
 ```
 
-각 스테이지는 전용 에이전트가 작업하고, 검증 에이전트가 산출물을 심사한다. 검증 실패 시 실패 원인과 수정 계획을 기록하고 재시도한다. 최대 재시도 횟수를 초과하면 사용자에게 에스컬레이션한다.
+각 스테이지는 전용 워커 서브에이전트가 작업하고, 검증 서브에이전트가 산출물을 심사한다. 검증 실패 시 실패 원인과 수정 계획을 `state.json`에 기록하고 재시도한다. `maxRetries`(기본 3) 초과 시 사용자 개입을 요청한다.
 
 ---
 
 ## 설치
 
-### Claude Code 플러그인으로 설치
-
-마켓플레이스를 추가하고 플러그인을 설치한다:
+마켓플레이스를 추가하고 플러그인을 설치한다.
 
 ```
-/plugin marketplace add https://raw.githubusercontent.com/inogard/harness/main/marketplace.json
+/plugin marketplace add https://raw.githubusercontent.com/gil613/gil-harness/main/marketplace.json
 /plugin install harness
 ```
 
-설치 후 `harness` 명령어가 Bash tool PATH에 자동 등록된다.
+설치 후 `/harness:*` 슬래시 명령어가 활성화된다.
 
-### 로컬 개발 / 테스트
+### 로컬 개발
 
 ```bash
-git clone https://github.com/inogard/harness
-claude --plugin-dir ./harness
+git clone https://github.com/gil613/gil-harness
+claude --plugin-dir ./gil-harness
 ```
 
 ---
 
 ## 빠른 시작
 
-```bash
-# 1. 새 프로젝트 디렉토리에서 초기화
-harness init
-
-# 2. 현재 스테이지 에이전트 실행
-harness run
-
-# 3. 검증
-harness validate
-
-# 4. 통과하면 다음 스테이지로 자동 이동, 2~3 반복
-harness run
-
-# 5. DONE 상태가 되면 회고
-harness retro
+```
+/harness:init        # 현재 프로젝트에 .harness/ 초기화
+/harness:run         # 현재 스테이지 워커 실행 (자동 검증까지)
+/harness:status      # 진행 상태 확인
+/harness:retro       # 모든 스테이지 완료 후 회고 + 지침 개선
 ```
 
 ---
 
 ## 명령어
 
-### `harness init`
+| 명령어 | 역할 |
+|--------|------|
+| `/harness:init` | 현재 프로젝트 자동 분석 → `.harness/config.json`, `.harness/state.json`, `CLAUDE.md` 생성 |
+| `/harness:run` | 현재 스테이지의 워커 서브에이전트 호출 → 끝나면 `/harness:validate` 자동 위임 |
+| `/harness:validate` | 결정론 검증(typecheck/lint/test/build, Bash) + 추론 검증(서브에이전트) |
+| `/harness:status` | 진행 상황 한 화면 요약 |
+| `/harness:advance` | 검증 생략하고 다음 스테이지로 강제 이동 (긴급용, 사용자 확인) |
+| `/harness:reset` | iteration/failures 리셋 — `maxRetries` 초과 후 지침 수정하고 재시도할 때 사용 |
+| `/harness:retro` | 회고 서브에이전트 → 실패 패턴 분석 → 에이전트 지침 직접 개선 |
 
-현재 디렉토리의 프로젝트 파일을 자동으로 분석해 설정값을 채운다. Enter를 누르면 감지된 값을 그대로 사용하고, 다른 값을 입력하면 덮어쓴다.
+### `/harness:init`
 
-```
-프로젝트 분석 중... 완료
+현재 디렉터리의 프로젝트 파일을 자동 분석해 설정값을 채운다.
 
-감지된 파일: package.json, tsconfig.json
-감지된 언어: TypeScript (Next.js)
-
-Enter를 누르면 감지된 값을 사용합니다.
-
-프로젝트 이름 [my-next-app]:
-주 언어/프레임워크 [TypeScript (Next.js)]:
-테스트 명령어 [npm test]:
-린트 명령어 [npm run lint]:
-타입체크 명령어 [npx tsc --noEmit]:
-빌드 명령어 [npm run build]:
-개발 서버 명령어 [npm run dev]:
-스테이지 최대 재시도 횟수 [3]:
-```
-
-감지 지원 환경: Node.js (TypeScript/JavaScript, React, Next.js, Vue, Nuxt, Svelte, Express, Fastify, NestJS), Python, Rust, Go, Java (Maven/Gradle), Kotlin
+감지 지원: Node.js (TypeScript/JavaScript, React, Next.js, Vue, Nuxt, Svelte, Express, Fastify, NestJS), Python, Rust, Go, Java (Maven/Gradle), Kotlin.
 
 생성 결과:
 
 ```
 .harness/
-  config.json          ← 프로젝트 설정
-  state.json           ← 현재 스테이지, 이력, 실패 기록
-  agents/              ← 스테이지별 에이전트 지침 (수정 가능)
-  validators/          ← 스테이지별 검증 기준 (수정 가능)
-  skills/              ← 반복 작업 절차 문서
-  retrospectives/      ← 회고 파일 저장소
-CLAUDE.md              ← Claude Code 세션 진입점
+  config.json          ← 프로젝트 설정 (수정 가능)
+  state.json           ← 현재 stage, iteration, failures, history (직접 수정 금지, /harness:reset 사용)
+CLAUDE.md              ← 세션 진입점 (이미 있으면 건드리지 않음)
 ```
 
-### `harness run`
+스테이지 산출물(`requirements.md`, `roadmap.md`, `progress.md`, `review-report.md`)과 `retrospectives/`는 각 스테이지에서 만들어진다.
 
-현재 스테이지에 맞는 에이전트 지침을 로드하고 Claude Code 세션을 시작한다. 세션 종료 후 자동으로 검증 실행 여부를 묻는다.
+### `/harness:run`
 
-이전 검증 실패 기록이 있으면 세션 시작 전에 실패 원인과 수정 계획을 출력한다.
+현재 스테이지에 맞는 워커 서브에이전트를 `Task`로 호출한다. 이전 검증 실패 기록이 있으면 cause/plan을 워커에게 전달해 보완 방향을 인지시킨다. `.harness/agents-overrides/<subagent>.md`가 있으면 그 내용을 프롬프트의 `[오버라이드]` 블록에 인라인해 회고가 만든 프로젝트 로컬 지침을 주입한다. 워커 종료 후 즉시 `/harness:validate` 절차로 이어진다.
 
-> Claude Code 내에서는 `/harness:run` 스킬을 사용하면 동일한 역할을 한다.
+`stage === 'DONE'`이면 `/harness:retro` 권장 메시지만 출력. `iteration >= maxRetries`이면 `/harness:reset` 권장 메시지 출력 후 종료.
 
-### `harness validate`
+### `/harness:validate`
 
-현재 스테이지의 검증 에이전트를 비대화형(`claude -p`)으로 실행해 산출물을 심사한다.
+두 단계로 산출물을 심사한다.
 
-**검증 통과 시:** 다음 스테이지로 자동 이동하고 `iteration`을 0으로 초기화한다.
+1. **결정론 검증** (DEVELOPMENT/REVIEW에만): 부모 세션이 Bash로 `typecheckCmd → lintCmd → testCmd → buildCmd` 순차 실행. 한 명령이 실패하면 추론 검증 생략하고 즉시 FAIL.
+2. **추론 검증**: 스테이지별 검증 서브에이전트(`requirements-validator`, `roadmap-validator`, `development-validator`, `review-validator`)가 산출물 품질 판정. 마지막 줄에 `VALIDATION_RESULT: PASS|FAIL` + (FAIL이면 `REASON`/`FIX_PLAN`).
 
-**검증 실패 시:** 실패 원인(`REASON`)과 수정 계획(`FIX_PLAN`)을 출력하고 `state.json`에 기록한다. `maxRetries` 초과 시 사용자 개입을 요청한다.
+PASS → 다음 스테이지 + `iteration=0` + `failures=[]` + `lastValidated` 갱신.
+FAIL → `iteration += 1`, `failures` 배열 끝에 append (최근 20개만 유지).
 
-### `harness status`
-
-현재 진행 상황을 출력한다.
+### `/harness:status`
 
 ```
 프로젝트: my-app
@@ -141,65 +117,67 @@ CLAUDE.md              ← Claude Code 세션 진입점
   ROADMAP — 2026-04-27
 ```
 
-### `harness advance`
+### `/harness:advance`
 
-검증 없이 다음 스테이지로 강제 이동한다. 이력에 `skippedValidation: true`가 기록된다. 긴급 상황에서만 사용한다.
+검증을 생략하고 다음 스테이지로 강제 이동. `history`에 `skippedValidation: true` 기록. 사용자에게 명시적으로 한 번 더 확인받는다.
 
-### `harness retro`
+### `/harness:reset`
 
-회고 에이전트 세션을 시작한다. 에이전트가 이번 사이클의 실패 패턴, 요구사항 품질, 개발 효율 등을 분석하고 에이전트 지침 개선 패치를 생성한다.
+| 인수 | 동작 |
+|------|------|
+| (없음) | `iteration=0`, `failures=[]` |
+| `--iteration` | `iteration`만 0 |
+| `--failures` | `failures`만 비움 |
+| `--all` | 둘 다 |
+| `--stage <STAGE>` | 강제 stage 변경 (확인 필요) |
 
-세션 종료 후 `.harness/retrospectives/YYYY-MM-DD.md`의 패치 블록을 자동으로 읽어 에이전트 지침 파일에 적용한다.
+`maxRetries`/`lastValidated`/`history`/`schemaVersion`은 절대 건드리지 않는다.
+
+### `/harness:retro`
+
+회고 서브에이전트(`retrospective`)를 호출해 이번 사이클을 분석한다. 산출물 두 가지:
+
+1. `.harness/retrospectives/<YYYY-MM-DD>.md` — 잘된 것 / 개선 필요 / 교훈
+2. **에이전트 지침 개선** — Edit 도구로 `.harness/agents-overrides/*.md`(프로젝트 로컬) 또는 명시적 동의 시 플러그인 본체 `agents/*.md`에 직접 적용
+
+별도의 패치 DSL은 사용하지 않는다 — Edit 도구가 그대로 패치 메커니즘이다.
 
 ---
 
 ## 스테이지 상세
 
-### REQUIREMENTS — 요구사항 수집
+### REQUIREMENTS — 요구사항 수집 (`requirements-collector`)
 
-에이전트가 사용자와 일대일 문답으로 요구사항을 구체화한다.
+- 한 번에 한 가지 질문
+- "나중에", "TBD" 같은 미결 표현 불가
+- 기능/비기능(성능·보안·확장성·운영환경)/명시적 제외/성공 기준 모두 채워야 통과
+- 산출물: `.harness/requirements.md`
 
-- 한 번에 한 가지 질문만 한다
-- "나중에", "TBD" 같은 미결 표현은 허용하지 않는다
-- 기능 요구사항, 비기능 요구사항(성능/보안/확장성/운영환경), 명시적 제외 항목, 성공 기준 모두 완료해야 다음 스테이지로 이동한다
+### ROADMAP — 로드맵 설계 (`roadmap-designer`)
 
-산출물: `.harness/requirements.md`
+- 각 태스크는 수직 슬라이스(E2E 단위)
+- 태스크마다 acceptance criteria + 의존관계
+- Wave 기반 실행 순서
+- 산출물: `.harness/roadmap.md`
 
-### ROADMAP — 로드맵 설계
-
-요구사항을 기반으로 구현 계획을 설계한다.
-
-- 각 태스크는 수직 슬라이스(E2E 동작 가능한 단위)
-- 태스크마다 acceptance criteria와 의존관계 명시
-- Wave 기반으로 실행 순서 정의
-
-산출물: `.harness/roadmap.md`
-
-### DEVELOPMENT — 구현
-
-로드맵의 태스크를 순서대로 구현한다.
+### DEVELOPMENT — 구현 (`developer`)
 
 - 한 번에 한 태스크
-- 태스크 완료마다 `config.json`의 테스트/린트/타입체크 명령어 실행
-- 진행 상황을 `.harness/progress.md`에 기록
+- 태스크 완료마다 `config.json`의 testCmd/lintCmd/typecheckCmd Bash 실행
+- 산출물: `.harness/progress.md`
 
-산출물: `.harness/progress.md`
+### REVIEW — 코드 리뷰 (`reviewer`)
 
-### REVIEW — 코드 리뷰
-
-구현된 코드를 심사한다.
-
-- 정확성, 보안(OWASP Top 10), 코드 품질 점검
-- config.json 명령어로 타입체크/린트/빌드/테스트 직접 실행
-- Critical 이슈가 있으면 FAIL
-
-산출물: `.harness/review-report.md`
+- 정확성, 보안(OWASP Top 10), 코드 품질
+- typecheck/lint/test/build 모두 직접 실행
+- Critical 이슈 1건이라도 있으면 FAIL
+- 산출물: `.harness/review-report.md`
 
 ---
 
 ## 검증 게이트
 
-각 스테이지 종료 시 검증 에이전트가 산출물을 심사한다. 검증은 완전히 비대화형으로 실행되며, 마지막 줄에 반드시 판정 결과를 출력한다.
+각 스테이지 종료 시 검증 서브에이전트가 산출물을 심사한다. 마지막 줄에 반드시 판정 결과:
 
 ```
 VALIDATION_RESULT: PASS
@@ -208,76 +186,78 @@ VALIDATION_RESULT: PASS
 
 VALIDATION_RESULT: FAIL
 REASON: [실패 원인 한 줄]
-FIX_PLAN: [에이전트가 재시도 시 집중할 것]
+FIX_PLAN: [재시도 시 집중할 것]
 ```
 
-실패 시 `state.json`의 `failures` 배열에 기록되며, 에이전트는 다음 세션 시작 시 이 기록을 읽고 보완 방향을 인지한 채 작업한다.
-
-**에스컬레이션:** `maxRetries`(기본 3)에 도달하면 자동화를 중단하고 사용자에게 에이전트 지침 또는 요구사항 수정을 요청한다. 수정 후 `state.json`의 `iteration`을 0으로 리셋하면 재시도한다.
+실패는 `state.json` `failures` 배열(최근 20개)에 기록되고, 다음 워커 세션은 이 cause/plan을 컨텍스트로 받아 보완 방향을 인지한 채 시작한다.
 
 ---
 
-## 회고 패치 시스템
+## 회고를 통한 자기 개선
 
-회고 에이전트는 이번 사이클의 교훈을 `.harness/retrospectives/YYYY-MM-DD.md`에 패치 블록으로 저장한다.
+회고 서브에이전트는 이번 사이클의 실패 패턴, 요구사항 변경 빈도, 로드맵 정확도, 리뷰 누락률을 분석해 **에이전트 지침 자체를 Edit 도구로 직접 수정**한다.
 
-```
-=== PATCH: agents/01-requirements.md ===
-[ADD]
-- 추가할 규칙
-=== END PATCH ===
+수정 대상 화이트리스트:
 
-=== PATCH: agents/03-developer.md ===
-[MODIFY]
-BEFORE: 수정 전 텍스트 (파일에서 정확히 복사)
-AFTER: 수정 후 텍스트
-=== END PATCH ===
+- `.harness/agents-overrides/*.md` (프로젝트 로컬 오버라이드, 기본)
+- 플러그인 본체 `agents/*.md` (사용자 명시적 동의 시에만)
 
-=== PATCH: agents/02-roadmap.md ===
-[REMOVE]
-제거할 텍스트
-=== END PATCH ===
-```
+`.env`, `secrets/`, 임의 코드 파일은 절대 수정하지 않는다.
 
-`harness retro` 세션이 끝나면 이 블록을 자동으로 파싱해 에이전트 지침 파일에 적용한다. 프로젝트를 거듭할수록 에이전트 지침이 프로젝트 특성에 맞게 정교해진다.
+프로젝트를 거듭할수록 에이전트 지침이 프로젝트 특성에 맞게 정교해진다.
 
 ---
 
 ## 프로젝트 구조
 
+플러그인이 사용자 프로젝트에 만드는 것:
+
 ```
 your-project/
-├── CLAUDE.md                        ← Claude Code 세션 진입점 (자동 생성)
+├── CLAUDE.md                        ← 세션 진입점 (자동 생성, 이미 있으면 건드리지 않음)
 └── .harness/
-    ├── config.json                  ← 프로젝트 설정
-    ├── state.json                   ← 현재 상태 (stage, iteration, failures, history)
-    ├── agents/
-    │   ├── 01-requirements.md       ← 요구사항 수집 에이전트 지침
-    │   ├── 02-roadmap.md            ← 로드맵 설계 에이전트 지침
-    │   ├── 03-developer.md          ← 개발 에이전트 지침
-    │   ├── 04-reviewer.md           ← 코드 리뷰 에이전트 지침
-    │   └── 05-retrospective.md      ← 회고 에이전트 지침
-    ├── validators/
-    │   ├── requirements.md          ← 요구사항 검증 기준
-    │   ├── roadmap.md               ← 로드맵 검증 기준
-    │   ├── development.md           ← 개발 완료 검증 기준
-    │   └── review.md                ← 리뷰 완료 검증 기준
-    ├── requirements.md              ← 산출물 (REQUIREMENTS 스테이지)
-    ├── roadmap.md                   ← 산출물 (ROADMAP 스테이지)
-    ├── progress.md                  ← 산출물 (DEVELOPMENT 스테이지)
-    ├── review-report.md             ← 산출물 (REVIEW 스테이지)
-    ├── skills/                      ← 반복 작업 절차 문서
+    ├── config.json                  ← 프로젝트 설정 (수정 가능)
+    ├── state.json                   ← 상태 (직접 수정 금지)
+    ├── requirements.md              ← REQUIREMENTS 산출물
+    ├── roadmap.md                   ← ROADMAP 산출물
+    ├── progress.md                  ← DEVELOPMENT 산출물
+    ├── review-report.md             ← REVIEW 산출물
+    ├── agents-overrides/*.md        ← (선택) 회고가 만드는 프로젝트별 지침 오버라이드
     └── retrospectives/
-        └── YYYY-MM-DD.md            ← 회고 파일
+        └── <YYYY-MM-DD>.md          ← 회고 보고서
 ```
 
-`agents/`와 `validators/` 안의 파일은 프로젝트 특성에 맞게 직접 편집하거나 회고를 통해 자동 개선된다.
+플러그인 본체 (이 저장소):
+
+```
+gil-harness/
+├── .claude-plugin/plugin.json
+├── marketplace.json
+├── agents/                          ← 워커 + 검증 서브에이전트 정의
+│   ├── requirements-collector.md
+│   ├── requirements-validator.md
+│   ├── roadmap-designer.md
+│   ├── roadmap-validator.md
+│   ├── developer.md
+│   ├── development-validator.md
+│   ├── reviewer.md
+│   ├── review-validator.md
+│   └── retrospective.md
+└── commands/                        ← 슬래시 명령어
+    ├── init.md
+    ├── run.md
+    ├── validate.md
+    ├── status.md
+    ├── advance.md
+    ├── reset.md
+    └── retro.md
+```
 
 ---
 
 ## config.json
 
-`harness init`이 생성하는 프로젝트 설정 파일. 검증 에이전트가 실제 명령어를 실행할 때 이 값을 참조한다.
+`/harness:init`이 생성한다. 검증/구현 단계의 Bash 실행이 이 값을 참조한다.
 
 ```json
 {
@@ -291,9 +271,10 @@ your-project/
 }
 ```
 
+명령어가 비어 있으면 해당 검사는 SKIP 처리된다.
+
 ---
 
 ## 요구사항
 
-- Node.js 18 이상
-- Claude Code CLI (`claude` 명령어가 PATH에 있어야 함)
+- Claude Code (`/plugin` 마켓플레이스 지원 버전)
