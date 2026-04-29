@@ -57,7 +57,7 @@ claude --plugin-dir ./gil-harness
 
 | Command | Role |
 |---------|------|
-| `/harness:init` | Auto-analyzes the current project → generates `.harness/config.json`, `.harness/state.json`, `CLAUDE.md` |
+| `/harness:init` | Auto-analyzes the current project → generates `.harness/config.json`, `.harness/state.json` |
 | `/harness:run` | **Full-pipeline auto-loop** — repeats run→validate until DONE or retry limit, no manual input needed |
 | `/harness:validate` | Deterministic checks (typecheck/lint/test/build via Bash) + inferential validation (sub-agent) |
 | `/harness:status` | Single-screen progress summary |
@@ -79,7 +79,6 @@ Generated files:
 .harness/
   config.json          ← project settings (editable)
   state.json           ← current stage, iteration, failures, history (do not edit directly — use /harness:reset)
-CLAUDE.md              ← session entry point (left untouched if it already exists)
 ```
 
 Stage artifacts (`requirements.md`, `roadmap.md`, `progress.md`, `review-report.md`) and `retrospectives/` are created by each stage as it runs.
@@ -149,7 +148,6 @@ No patch DSL is used — the Edit tool is the patch mechanism.
 Run after updating the plugin (`claude plugin update harness` or `git pull`) to sync existing project files with the new version.
 
 - **config.json**: adds only fields introduced in the new schema. Existing fields are never overwritten
-- **CLAUDE.md**: auto-refreshes to the current template if unmodified. Shows a diff and asks overwrite/skip if the user has made changes
 - **Directories**: creates any new `.harness/` subdirectories required by the new version
 
 `state.json`, artifacts, and retrospectives are never touched.
@@ -157,8 +155,6 @@ Run after updating the plugin (`claude plugin update harness` or `git pull`) to 
 ### `/harness:uninstall`
 
 Completely removes the harness from the current project. Deletes the entire `.harness/` directory (config, state, artifacts, logs, retrospectives). Displays the deletion list and requires explicit confirmation before proceeding.
-
-`CLAUDE.md` is not deleted — it may contain user content. Remove or edit it manually as needed.
 
 To remove the plugin binary itself: `claude plugin remove harness`
 To update the plugin to a newer version: `claude plugin update harness`
@@ -236,7 +232,6 @@ What the plugin creates in your project:
 
 ```
 your-project/
-├── CLAUDE.md                        ← session entry point (auto-generated, left untouched if present)
 └── .harness/
     ├── config.json                  ← project settings (editable)
     ├── state.json                   ← state (do not edit directly)
