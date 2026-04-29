@@ -43,11 +43,18 @@ From the context passed by the caller:
 - [ ] Is there no unnecessary complexity?
 - [ ] Is there no deletable dead code?
 
-## Handling Findings
+## Severity Criteria
 
-- **Critical** (security, functional errors): fix immediately, then re-verify
-- **Major** (performance, maintainability): fix, then re-verify
-- **Minor** (style): record only, fix is optional
+| Level | Conditions | Action |
+|-------|-----------|--------|
+| **Critical** | Security vulnerabilities (OWASP Top 10), unmet functional requirements, data loss risk, crashes/exceptions in normal flow | Fix immediately, then re-verify. Unresolved → FAIL |
+| **Major** | Unmet non-functional requirements (performance, availability), missing error handling for expected scenarios, excessive cyclomatic complexity | Fix, then re-verify. Unresolved → FAIL |
+| **Minor** | Code style, naming conventions, missing docs | Record only, fix optional. PASS still possible |
+
+## Final Verdict Criteria
+
+- **FAIL**: Any Critical or Major item remains unresolved
+- **PASS**: All Critical and Major items resolved (Minor items do not affect verdict)
 
 ## Output
 

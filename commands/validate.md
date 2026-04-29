@@ -153,7 +153,7 @@ REVIEW: requirements.md, roadmap.md, review-report.md
 `state.json` 갱신 (Edit):
 
 - `iteration` → +1
-- `failures` → 기존 배열 끝에 다음 객체 append. **단, 길이가 20을 넘으면 가장 오래된 항목부터 제거 (최근 20개만 유지)**:
+- `failures` → 기존 배열 끝에 다음 객체 append. **단, 길이가 maxRetries를 넘으면 가장 오래된 항목부터 제거 (최근 maxRetries개만 유지)**:
   ```json
   {
     "stage": "<현재 stage>",

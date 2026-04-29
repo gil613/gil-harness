@@ -6,5 +6,6 @@
     "name": "gil613"
   },
   "repository": "https://github.com/gil613/gil-harness",
-  "commands": ["./commands/"]
+  "commands": ["./commands/"],
+  "agents": ["./agents/", "./agents/en/"]
 }
