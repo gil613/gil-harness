@@ -15,7 +15,9 @@ allowed-tools: Read, Edit, Bash, Task
 ### 1. 상태 로드
 
 - `.harness/state.json`, `.harness/config.json` 읽기
-- 현재 stage가 `DONE`이면 "완료. /harness:retro 권장" 출력 후 종료
+- 현재 stage가 `DONE`이면 ko: "완료. /harness:retro 권장" / en: "Done. /harness:retro recommended" 출력 후 종료
+
+이후 모든 출력은 `config.uiLanguage`에 따라 한국어 또는 영어로 표시한다.
 
 ### 2. 결정론 검증 (DEVELOPMENT, REVIEW 단계에만)
 
@@ -56,14 +58,18 @@ stage가 `DEVELOPMENT` 또는 `REVIEW`일 때만 실행. REQUIREMENTS/ROADMAP은
 
 ### 3. 추론 검증 — 검증 서브에이전트 호출
 
+`config.uiLanguage`를 확인해 서브에이전트를 결정한다. `"en"`이면 `-en` 접미사 에이전트를 사용한다.
+
 stage → 서브에이전트:
 
-| stage | subagent_type |
-|-------|---------------|
-| REQUIREMENTS | requirements-validator |
-| ROADMAP | roadmap-validator |
-| DEVELOPMENT | development-validator |
-| REVIEW | review-validator |
+| stage | uiLanguage=ko | uiLanguage=en |
+|-------|---------------|---------------|
+| REQUIREMENTS | requirements-validator | requirements-validator-en |
+| ROADMAP | roadmap-validator | roadmap-validator-en |
+| DEVELOPMENT | development-validator | development-validator-en |
+| REVIEW | review-validator | review-validator-en |
+
+`config.uiLanguage`가 없거나 `"ko"`이면 기존 한국어 에이전트 사용.
 
 #### 3-1. 오버라이드 로드
 
@@ -123,11 +129,14 @@ REVIEW: requirements.md, roadmap.md, review-report.md
 - `failures` → `[]` (PASS 시 누적 실패 리셋)
 - `history` → 기존 배열에 `{ stage, completedAt }` append
 
-출력:
+출력 (`uiLanguage`에 따라):
 
 ```
-검증 통과: <이전 stage> -> <다음 stage>
-다음: /harness:run    (또는 DONE이면 /harness:retro)
+[ko] 검증 통과: <이전 stage> -> <다음 stage>
+     다음: /harness:run    (또는 DONE이면 /harness:retro)
+
+[en] Validation passed: <prev stage> -> <next stage>
+     Next: /harness:run    (or /harness:retro if DONE)
 ```
 
 ### 5b. FAIL 처리
@@ -149,20 +158,32 @@ REVIEW: requirements.md, roadmap.md, review-report.md
   }
   ```
 
-출력:
+출력 (`uiLanguage`에 따라):
 
 ```
+[ko]
 검증 실패: <stage>
 원인:      <cause>
 수정 계획: <plan>
 
 남은 재시도: <maxRetries - 새 iteration>회
+
+[en]
+Validation failed: <stage>
+Cause:      <cause>
+Fix plan:   <plan>
+
+Retries remaining: <maxRetries - new iteration>
 ```
 
 `새 iteration >= maxRetries`이면 추가 안내:
 
 ```
-재시도 한계 도달 — 사용자 개입 필요.
-에이전트 지침(.harness/agents 또는 플러그인 agents/)이나 요구사항을 수정한 뒤
-/harness:reset 으로 iteration을 리셋하세요.
+[ko] 재시도 한계 도달 — 사용자 개입 필요.
+     에이전트 지침(.harness/agents 또는 플러그인 agents/)이나 요구사항을 수정한 뒤
+     /harness:reset 으로 iteration을 리셋하세요.
+
+[en] Retry limit reached — user intervention required.
+     Modify agent instructions (.harness/agents or plugin agents/) or requirements,
+     then reset with /harness:reset.
 ```

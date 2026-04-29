@@ -9,11 +9,24 @@ allowed-tools: Bash, Read, Write, Edit, Glob
 
 ## 절차
 
-### 1. 기존 초기화 여부 확인
+### 1. 언어 선택 / Language Selection
+
+사용자에게 UI 언어를 선택하게 한다. 단 한 번만 묻는다:
+
+```
+언어를 선택하세요 / Please select a language:
+  [ko] 한국어 (기본값)
+  [en] English
+```
+
+`ko` 또는 `en` 이외의 입력은 `ko`로 fallback. 입력이 없으면 `ko`로 처리.
+선택된 값을 `uiLanguage` 변수에 저장해 이후 단계에서 사용한다.
+
+### 2. 기존 초기화 여부 확인
 
 `.harness/state.json`이 이미 존재하면 즉시 중단하고 사용자에게 알린다. 절대 덮어쓰지 않는다.
 
-### 2. 프로젝트 자동 감지
+### 3. 프로젝트 자동 감지
 
 다음 파일을 Glob/Read로 확인해 프로젝트 메타데이터를 추출한다.
 
@@ -38,10 +51,11 @@ allowed-tools: Bash, Read, Write, Edit, Glob
 
 프레임워크 감지 (package.json deps): `next`, `nuxt`, `react`, `vue`, `svelte`, `express`, `fastify`, `@nestjs/core`.
 
-### 3. 사용자에게 확인
+### 4. 사용자에게 확인
 
-감지된 값을 표로 보여주고 한 번에 확인받는다. 각 필드 개별 질문하지 말 것 — 사용자가 수정 필요한 항목만 알려주면 거기만 갱신한다.
+`uiLanguage === "en"` 이면 영문으로, 아니면 한국어로 표를 보여준다. 각 필드 개별 질문하지 말 것 — 사용자가 수정 필요한 항목만 알려주면 거기만 갱신한다.
 
+**한국어 (ko)**:
 ```
 프로젝트 이름:     <감지값>
 주 언어/프레임워크: <감지값>
@@ -51,6 +65,18 @@ allowed-tools: Bash, Read, Write, Edit, Glob
 빌드:              <감지값>
 개발 서버:         <감지값>
 스테이지 최대 재시도: 3
+```
+
+**English (en)**:
+```
+Project name:       <detected>
+Language/Framework: <detected>
+Test:               <detected>
+Lint:               <detected>
+Typecheck:          <detected>
+Build:              <detected>
+Dev server:         <detected>
+Max stage retries:  3
 ```
 
 `maxRetries`는 정수만 허용. 비정상 입력 시 3으로 fallback.
@@ -66,13 +92,14 @@ allowed-tools: Bash, Read, Write, Edit, Glob
 
 빈 문자열은 허용 (해당 검사 SKIP 처리).
 
-### 4. 파일 생성
+### 5. 파일 생성
 
-**`.harness/config.json`**:
+**`.harness/config.json`** (`uiLanguage` 필드 포함):
 ```json
 {
   "projectName": "...",
   "language": "...",
+  "uiLanguage": "ko",
   "testCmd": "...",
   "lintCmd": "...",
   "typecheckCmd": "...",
@@ -80,6 +107,8 @@ allowed-tools: Bash, Read, Write, Edit, Glob
   "devCmd": "..."
 }
 ```
+
+`uiLanguage`는 단계 1에서 선택한 값(`"ko"` 또는 `"en"`)으로 설정한다.
 
 **`.harness/state.json`**:
 ```json
@@ -102,6 +131,9 @@ allowed-tools: Bash, Read, Write, Edit, Glob
 
 **`CLAUDE.md`** (프로젝트 루트, **이미 있으면 건드리지 않음** — 사용자 제어 텍스트는 간접 프롬프트 인젝션 벡터):
 
+`uiLanguage === "en"` 이면 영문 템플릿, 아니면 한국어 템플릿을 사용한다.
+
+**한국어 템플릿**:
 ```markdown
 # [PROJECT_NAME] 하네스
 
@@ -139,10 +171,49 @@ REQUIREMENTS → ROADMAP → DEVELOPMENT → REVIEW → DONE
 - 세션 시작 시 failures 배열을 확인해 이전 실패 원인을 인지하고 시작
 ```
 
-### 5. 완료 보고
+**English template**:
+```markdown
+# [PROJECT_NAME] Harness
 
-생성된 파일 목록과 다음 단계 안내:
+This project is managed by the Claude Code harness plugin.
 
+## Workflow
+
+```
+REQUIREMENTS → ROADMAP → DEVELOPMENT → REVIEW → DONE
+```
+
+Each stage is handled by a dedicated sub-agent, and a validator agent reviews the output.
+
+## Commands
+
+- `/harness:status` — current progress
+- `/harness:run` — run the current stage
+- `/harness:validate` — check if the validation gate passes
+- `/harness:advance` — force advance to the next stage without validation (emergency)
+- `/harness:reset` — reset iteration/failures (retry after hitting maxRetries)
+- `/harness:retro` — retrospective + automatic agent instruction improvement
+
+## State Files
+
+- `.harness/config.json` — project settings (editable)
+- `.harness/state.json` — current state (do not edit directly, use /harness:reset)
+- `.harness/{requirements,roadmap,progress,review-report}.md` — stage outputs
+- `.harness/retrospectives/YYYY-MM-DD.md` — retrospective records
+
+## Core Principles
+
+- Each stage has a clear output — never declare completion without output
+- Do not add anything the user has not mentioned
+- Failure causes are automatically recorded in the `.harness/state.json` failures array
+- At session start, check the failures array to be aware of previous failure causes
+```
+
+### 6. 완료 보고
+
+`uiLanguage === "en"` 이면 영문으로, 아니면 한국어로 출력한다.
+
+**한국어**:
 ```
 초기화 완료: <projectName>
 
@@ -154,4 +225,18 @@ REQUIREMENTS → ROADMAP → DEVELOPMENT → REVIEW → DONE
 다음 단계:
   /harness:status   현재 상태 확인
   /harness:run      요구사항 수집 시작
+```
+
+**English**:
+```
+Initialized: <projectName>
+
+Files created:
+  .harness/config.json
+  .harness/state.json
+  CLAUDE.md (or appended)
+
+Next steps:
+  /harness:status   check current status
+  /harness:run      start requirements collection
 ```

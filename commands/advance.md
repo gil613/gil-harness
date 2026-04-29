@@ -11,16 +11,19 @@ allowed-tools: Read, Edit
 
 ### 1. 사용자 확인
 
-먼저 사용자에게 명시적으로 한 번 묻는다:
+`.harness/config.json`을 읽어 `uiLanguage`를 확인한 뒤 이후 모든 출력 언어를 결정한다. 없거나 `"ko"`이면 한국어.
 
-> 검증을 생략하고 다음 스테이지로 강제 이동합니다. 진행할까요? (yes/no)
+사용자에게 명시적으로 한 번 묻는다:
+
+**ko**: > 검증을 생략하고 다음 스테이지로 강제 이동합니다. 진행할까요? (yes/no)
+**en**: > Skipping validation and force-advancing to the next stage. Continue? (yes/no)
 
 `yes`/`y`가 아니면 중단.
 
 ### 2. state.json 읽고 판정
 
-- `.harness/state.json` 없으면 "초기화 필요" 후 종료
-- `state.stage === 'DONE'`이면 "이미 마지막 스테이지" 후 종료
+- `.harness/state.json` 없으면 ko: "초기화 필요" / en: "Not initialized" 후 종료
+- `state.stage === 'DONE'`이면 ko: "이미 마지막 스테이지" / en: "Already at the last stage" 후 종료
 
 ### 3. 다음 스테이지 계산
 
@@ -48,6 +51,5 @@ next = STAGES[STAGES.indexOf(state.stage) + 1]
 
 ### 5. 출력
 
-```
-<이전 stage> -> <next> (검증 생략)
-```
+**ko**: `<이전 stage> -> <next> (검증 생략)`
+**en**: `<prev stage> -> <next> (validation skipped)`

@@ -21,13 +21,16 @@ argument-hint: "[--iteration|--failures|--all]"
 
 ### 1. state.json 읽기
 
-`.harness/state.json` 없으면 "초기화 필요" 후 종료.
+`.harness/config.json`을 먼저 읽어 `uiLanguage`를 확인한다. 없거나 `"ko"`이면 한국어.
+
+`.harness/state.json` 없으면 ko: "초기화 필요" / en: "Not initialized" 후 종료.
 
 ### 2. 사용자 확인 (--stage 사용 시에만)
 
 `--stage` 인수가 있으면 명시적으로 한 번 더 확인:
 
-> 스테이지를 <X>로 강제 변경합니다. 산출물과 history는 보존됩니다. 진행할까요? (yes/no)
+**ko**: > 스테이지를 <X>로 강제 변경합니다. 산출물과 history는 보존됩니다. 진행할까요? (yes/no)
+**en**: > Force-changing stage to <X>. Outputs and history will be preserved. Continue? (yes/no)
 
 ### 3. Edit으로 state.json 갱신
 
@@ -48,8 +51,16 @@ argument-hint: "[--iteration|--failures|--all]"
 
 ### 4. 출력
 
+**ko**:
 ```
 리셋 완료: iteration=0, failures=[]
 현재 스테이지: <stage>
 다음: /harness:run
+```
+
+**en**:
+```
+Reset complete: iteration=0, failures=[]
+Current stage: <stage>
+Next: /harness:run
 ```

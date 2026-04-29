@@ -12,8 +12,10 @@ allowed-tools: Read, Edit, Write, Bash, Glob, Grep, Task
 ### 1. 상태 로드
 
 - `.harness/state.json`, `.harness/config.json` 읽기
-- `state.stage === 'DONE'`이면 "완료. /harness:retro 권장" 출력 후 종료
-- `state.iteration >= state.maxRetries`이면 "재시도 한계 도달 — /harness:reset 후 재시도" 출력 후 종료
+- `state.stage === 'DONE'`이면 ko: "완료. /harness:retro 권장" / en: "Done. /harness:retro recommended" 출력 후 종료
+- `state.iteration >= state.maxRetries`이면 ko: "재시도 한계 도달 — /harness:reset 후 재시도" / en: "Retry limit reached — reset with /harness:reset and retry" 출력 후 종료
+
+이후 모든 출력은 `config.uiLanguage`에 따라 한국어 또는 영어로 표시한다.
 
 ### 2. 이전 실패 인지 (있으면)
 
@@ -28,14 +30,18 @@ allowed-tools: Read, Edit, Write, Bash, Glob, Grep, Task
 
 ### 3. 워커 서브에이전트 호출
 
+`config.uiLanguage`를 확인해 서브에이전트를 결정한다. `"en"`이면 `-en` 접미사 에이전트를 사용한다.
+
 stage → 서브에이전트 매핑:
 
-| stage | subagent_type |
-|-------|---------------|
-| REQUIREMENTS | requirements-collector |
-| ROADMAP | roadmap-designer |
-| DEVELOPMENT | developer |
-| REVIEW | reviewer |
+| stage | uiLanguage=ko | uiLanguage=en |
+|-------|---------------|---------------|
+| REQUIREMENTS | requirements-collector | requirements-collector-en |
+| ROADMAP | roadmap-designer | roadmap-designer-en |
+| DEVELOPMENT | developer | developer-en |
+| REVIEW | reviewer | reviewer-en |
+
+`config.uiLanguage`가 없거나 `"ko"`이면 기존 한국어 에이전트 사용.
 
 #### 3-1. 오버라이드 로드
 

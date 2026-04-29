@@ -32,7 +32,9 @@ allowed-tools: Read, Edit, Write, Bash, Task, Glob
 
 ### 3. 회고 서브에이전트 호출
 
-`Task(subagent_type: "retrospective", ...)` 호출. 프롬프트에 위의 컨텍스트와 다음 지시 포함:
+`config.uiLanguage`가 `"en"`이면 `subagent_type: "retrospective-en"`, 아니면 `subagent_type: "retrospective"`를 사용한다.
+
+`Task(subagent_type: "retrospective" 또는 "retrospective-en", ...)` 호출. 프롬프트에 위의 컨텍스트와 다음 지시 포함:
 
 - 실패 패턴 분석 (state.failures의 cause 분포)
 - 요구사항 수집 품질 (개발 중 요구사항 변경 횟수)
