@@ -54,6 +54,7 @@ stage가 `DEVELOPMENT` 또는 `REVIEW`일 때만 실행. REQUIREMENTS/ROADMAP은
 
 - `cause` = "결정론 검증 실패 — <라벨>=<상태>(exit <코드>) ..."
 - `plan` = "<첫 실패 라벨>(<명령어>) 실패 원인 우선 해결. 로그: <로그 파일 경로>"
+- 현재 stage가 `REVIEW`이면 내부 플래그 `regressTo = "DEVELOPMENT"` 설정 (깨진 코드는 리뷰어 재시도가 아니라 개발자 에이전트가 수정해야 함)
 - "실패 처리" 절차로 진행 (아래 5번)
 
 ### 3. 추론 검증 — 검증 서브에이전트 호출
@@ -104,12 +105,17 @@ REVIEW: requirements.md, roadmap.md, review-report.md
 <파일 내용 그대로>
 
 [지시]
-판정 결과를 마지막 줄에 정확히 다음 형식 중 하나로 출력:
+판정 결과를 마지막 줄 블록에 정확히 다음 형식 중 하나로 출력:
   VALIDATION_RESULT: PASS
 또는
   VALIDATION_RESULT: FAIL
   REASON: <한 줄>
   FIX_PLAN: <보완 방향>
+또는 (이전 단계로 회귀 — 검증 에이전트가 지원할 때만; 예: review-validator)
+  VALIDATION_RESULT: FAIL
+  REASON: <한 줄>
+  FIX_PLAN: <보완 방향>
+  REGRESS_TO: <단계명>
 ```
 
 ### 4. 결과 파싱
@@ -118,6 +124,7 @@ REVIEW: requirements.md, roadmap.md, review-report.md
 
 - `VALIDATION_RESULT: (PASS|FAIL)` 추출
 - 둘 다 매치 안 되면 **runtime 오류로 간주, iteration 증가시키지 않음**. 사용자에게 보고하고 종료.
+- `VALIDATION_RESULT: FAIL`이면 추가로 `REGRESS_TO: <단계>`도 추출 시도. 값이 `REQUIREMENTS|ROADMAP|DEVELOPMENT|REVIEW` 중 하나면 내부 플래그 `regressTo = <단계>` 설정 (2번 단계에서 설정한 값보다 우선). 아니면 `regressTo` 미설정 유지.
 
 ### 5a. PASS 처리
 
@@ -148,24 +155,29 @@ REVIEW: requirements.md, roadmap.md, review-report.md
 
 ### 5b. FAIL 처리
 
-서브에이전트 응답에서 `REASON: <한 줄>`, `FIX_PLAN: <블록>` 추출.
+서브에이전트 응답에서 `REASON: <한 줄>`, `FIX_PLAN: <블록>` 추출. 2번(결정론) 또는 4번(REGRESS_TO)에서 설정된 `regressTo` 플래그도 함께 사용.
 
 `state.json` 갱신 (Edit):
 
 - `iteration` → +1
+- `regressTo`가 설정돼 있고 AND `새 iteration < maxRetries`이면:
+  - `stage` → `regressTo` (지정한 이전 단계로 회귀; 다음 루프에서 developer 등이 수정 담당)
+  - iteration은 그대로 유지 (FAIL은 단계와 무관하게 전역 재시도 예산을 차감)
+- 아니면: `stage` 그대로 (같은 단계 재시도)
 - `failures` → 기존 배열 끝에 다음 객체 append. **단, 길이가 maxRetries를 넘으면 가장 오래된 항목부터 제거 (최근 maxRetries개만 유지)**:
   ```json
   {
-    "stage": "<현재 stage>",
+    "stage": "<실패 시점 stage>",
     "attempt": <새 iteration>,
     "cause": "<REASON>",
     "plan": "<FIX_PLAN>",
     "timestamp": "<ISO 시각>",
-    "deterministic": [<결정론 검증이 실행됐다면 라벨/상태/exit 요약>]
+    "deterministic": [<결정론 검증이 실행됐다면 라벨/상태/exit 요약>],
+    "regressedTo": "<regressTo 값, 미설정이면 생략>"
   }
   ```
 
-출력 (`uiLanguage`에 따라):
+출력 (`uiLanguage`에 따라, `regressTo` 미설정 시):
 
 ```
 [ko]
@@ -177,6 +189,24 @@ REVIEW: requirements.md, roadmap.md, review-report.md
 
 [en]
 Validation failed: <stage>
+Cause:      <cause>
+Fix plan:   <plan>
+
+Retries remaining: <maxRetries - new iteration>
+```
+
+출력 (`regressTo`가 설정·적용된 경우):
+
+```
+[ko]
+검증 실패: <stage>  → <regressTo> 단계로 회귀
+원인:      <cause>
+수정 계획: <plan>
+
+남은 재시도: <maxRetries - 새 iteration>회
+
+[en]
+Validation failed: <stage>  → regressing to <regressTo>
 Cause:      <cause>
 Fix plan:   <plan>
 

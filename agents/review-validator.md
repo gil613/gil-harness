@@ -25,12 +25,13 @@ Determine whether `.harness/review-report.md` and the deterministic verification
 - Is there a `## Findings and Actions` section with `### Critical`, `### Major`, `### Minor` subsections all explicitly present?
 - Is there a `## Final Verdict` section?
 
-### Zero Unresolved Critical Issues
-- If there are unresolved items under `### Critical` → FAIL
-- Items with resolution markers like "[Fixed]", "[Resolved]" may pass — but the fix content must be described in the body
+### Zero Critical / Zero Major Findings
+- If there is **any** item under `### Critical` → FAIL (regress to DEVELOPMENT)
+- If there is **any** item under `### Major` → FAIL (regress to DEVELOPMENT)
+- "[Fixed]" / "[Resolved]" / "[수정 완료]" / "[해결됨]" markers are **rejected**. The reviewer is discovery-only; in-place patches by the reviewer are not allowed. If you see such a marker, treat the item as a finding and FAIL.
 
 ### Final Verdict Consistency
-- If `## Final Verdict` is `PASS` while Critical has unresolved items → FAIL (self-contradiction)
+- If `## Final Verdict` is `PASS` while Critical or Major has any item → FAIL (self-contradiction)
 - If `## Final Verdict` is `FAIL` → FAIL as-is
 
 ### Verification Command Results Consistency
@@ -40,16 +41,36 @@ Determine whether `.harness/review-report.md` and the deterministic verification
 
 PASS if all items pass. FAIL if any item fails.
 
-## Output (must be on the last line)
+## Regression Routing
+
+When FAILing, decide whether the next iteration should re-run REVIEW or regress to DEVELOPMENT:
+
+- **Regress to DEVELOPMENT** when the failure requires source code changes:
+  - Any Critical or Major finding present
+  - Any deterministic verification (typecheck/lint/test/build) FAIL
+  - Verification result fabrication (body claims PASS but deterministic shows FAIL)
+- **Retry REVIEW** (no regression) when the failure is a reviewer output defect only:
+  - Missing required sections, missing `## Final Verdict`, missing report file
+  - Self-contradicting verdict text
+
+## Output (must be on the last line block)
 
 Pass:
 ```
 VALIDATION_RESULT: PASS
 ```
 
-Fail:
+Fail without regression (reviewer output defect — same stage retry):
 ```
 VALIDATION_RESULT: FAIL
 REASON: <one line — which item failed and why>
 FIX_PLAN: <specific direction for the reviewer agent to address on retry>
+```
+
+Fail with regression to DEVELOPMENT (code changes needed):
+```
+VALIDATION_RESULT: FAIL
+REASON: <one line — which item failed and why>
+FIX_PLAN: <specific direction for the developer agent to address on retry>
+REGRESS_TO: DEVELOPMENT
 ```

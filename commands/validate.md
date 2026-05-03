@@ -54,6 +54,7 @@ If any FAIL/ERROR/TIMEOUT occurs, do not proceed to inferential validation and f
 
 - `cause` = "Deterministic validation failed — <label>=<status>(exit <code>) ..."
 - `plan` = "Resolve <first failed label>(<command>) failure first. Log: <log file path>"
+- If current stage is `REVIEW`, also set internal flag `regressTo = "DEVELOPMENT"` (broken code requires the developer agent, not another reviewer pass)
 - Proceed to the "failure handling" procedure (step 5 below)
 
 ### 3. Inferential validation — call validation sub-agent
@@ -104,12 +105,17 @@ REVIEW: requirements.md, roadmap.md, review-report.md
 <file contents verbatim>
 
 [INSTRUCTIONS]
-Output the verdict on the last line in exactly one of these formats:
+Output the verdict on the last line block in exactly one of these formats:
   VALIDATION_RESULT: PASS
 or
   VALIDATION_RESULT: FAIL
   REASON: <one line>
   FIX_PLAN: <remediation direction>
+or (regress to a previous stage — only when the validator agent supports it; e.g., review-validator)
+  VALIDATION_RESULT: FAIL
+  REASON: <one line>
+  FIX_PLAN: <remediation direction>
+  REGRESS_TO: <STAGE NAME>
 ```
 
 ### 4. Parse result
@@ -118,6 +124,7 @@ From the text returned by the sub-agent:
 
 - Extract `VALIDATION_RESULT: (PASS|FAIL)`
 - If neither matches, **treat as a runtime error, do not increment iteration**. Report to the user and exit.
+- If `VALIDATION_RESULT: FAIL`, also try to extract `REGRESS_TO: <STAGE>`. If present and the value is one of `REQUIREMENTS|ROADMAP|DEVELOPMENT|REVIEW`, set the internal flag `regressTo = <STAGE>` (overrides any value set in step 2). Otherwise leave `regressTo` unset.
 
 ### 5a. PASS handling
 
@@ -145,27 +152,42 @@ Omit this hint when called inline within the `/harness:run` loop — run will co
 
 ### 5b. FAIL handling
 
-Extract `REASON: <one line>` and `FIX_PLAN: <block>` from the sub-agent response.
+Extract `REASON: <one line>` and `FIX_PLAN: <block>` from the sub-agent response. Also use the `regressTo` flag set in step 2 (deterministic) or step 4 (REGRESS_TO).
 
 Update `state.json` (Edit):
 
 - `iteration` → +1
+- If `regressTo` is set AND `new iteration < maxRetries`:
+  - `stage` → `regressTo` (regress to the specified earlier stage; the developer/etc. handles remediation in the next loop)
+  - iteration carries over (each FAIL counts toward the global retry budget regardless of stage)
+- Otherwise: `stage` unchanged (same-stage retry)
 - `failures` → append the following object to the end of the existing array. **If the length exceeds maxRetries, remove the oldest entries (keep only the most recent maxRetries entries)**:
   ```json
   {
-    "stage": "<current stage>",
+    "stage": "<stage at time of failure>",
     "attempt": <new iteration>,
     "cause": "<REASON>",
     "plan": "<FIX_PLAN>",
     "timestamp": "<ISO timestamp>",
-    "deterministic": [<label/status/exit summary if deterministic validation ran>]
+    "deterministic": [<label/status/exit summary if deterministic validation ran>],
+    "regressedTo": "<regressTo if set, omit otherwise>"
   }
   ```
 
-Output:
+Output (when `regressTo` is unset):
 
 ```
 Validation failed: <stage>
+Cause:      <cause>
+Fix plan:   <plan>
+
+Retries remaining: <maxRetries - new iteration>
+```
+
+Output (when `regressTo` is set and applied):
+
+```
+Validation failed: <stage>  → regressing to <regressTo>
 Cause:      <cause>
 Fix plan:   <plan>
 
