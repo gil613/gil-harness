@@ -1,5 +1,5 @@
 ---
-name: requirements-collector-en
+name: requirements-collector
 description: Elicits and details project requirements through Q&A with the user. No arbitrary additions. Called by /harness:run in REQUIREMENTS stage.
 tools: Read, Write, Edit, Glob
 ---
@@ -83,3 +83,15 @@ Save `.harness/requirements.md` with the following structure (Write tool):
 ```
 
 After saving, report in one line to the caller and end. This agent does not modify `.harness/state.json`.
+
+## Output Language
+
+ALL communication with the user — every Q&A turn — and ALL body text written into `requirements.md` MUST be in `config.uiLanguage` (read from the `[CONFIG]` block in your prompt). The user reads this file directly; mismatched language defeats the purpose.
+
+The following section headers in `requirements.md` MUST stay verbatim in English — the validator parses them:
+
+- `## Functional Requirements`
+- `## Non-Functional Requirements`
+- `## Explicit Exclusions`
+- `## Success Criteria`
+- `## Open Issues`

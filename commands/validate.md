@@ -15,9 +15,8 @@ Judges whether the current stage artifacts meet the quality bar to advance to th
 ### 1. Load state
 
 - Read `.harness/state.json` and `.harness/config.json`
-- If the current stage is `DONE`, print "Done. /harness:retro recommended" and exit
-
-All subsequent output follows `config.uiLanguage`.
+- Read `config.uiLanguage` — all subsequent user-facing output uses messages from the `## Messages` table below, keyed by this value
+- If the current stage is `DONE`, print `messages.already_done` and exit
 
 ### 2. Deterministic validation (DEVELOPMENT and REVIEW stages only)
 
@@ -52,25 +51,21 @@ Print each result to the console and accumulate in a results table:
 
 If any FAIL/ERROR/TIMEOUT occurs, do not proceed to inferential validation and fail immediately:
 
-- `cause` = "Deterministic validation failed — <label>=<status>(exit <code>) ..."
-- `plan` = "Resolve <first failed label>(<command>) failure first. Log: <log file path>"
+- `cause` = `messages.deterministic_cause` populated with `<label>`, `<status>`, `<code>`
+- `plan` = `messages.deterministic_plan` populated with `<label>`, `<command>`, `<log path>`
 - If current stage is `REVIEW`, also set internal flag `regressTo = "DEVELOPMENT"` (broken code requires the developer agent, not another reviewer pass)
 - Proceed to the "failure handling" procedure (step 5 below)
 
 ### 3. Inferential validation — call validation sub-agent
 
-Check `config.uiLanguage` to determine the sub-agent. If `"en"`, use the `-en` suffix agent.
-
 stage → sub-agent:
 
-| stage | uiLanguage=ko | uiLanguage=en |
-|-------|---------------|---------------|
-| REQUIREMENTS | requirements-validator | requirements-validator-en |
-| ROADMAP | roadmap-validator | roadmap-validator-en |
-| DEVELOPMENT | development-validator | development-validator-en |
-| REVIEW | review-validator | review-validator-en |
-
-If `config.uiLanguage` is missing or `"ko"`, use the existing Korean agents.
+| stage | sub-agent |
+|-------|-----------|
+| REQUIREMENTS | requirements-validator |
+| ROADMAP | roadmap-validator |
+| DEVELOPMENT | development-validator |
+| REVIEW | review-validator |
 
 #### 3-1. Load overrides
 
@@ -86,6 +81,14 @@ Call via the `Task` tool. Use the structure below exactly (omit blocks that do n
 
 [CONFIG]
 <full .harness/config.json>
+
+[OUTPUT LANGUAGE]
+{config.uiLanguage}
+
+The body text of REASON and FIX_PLAN MUST be in this language — they are surfaced
+to the user verbatim. Protocol labels (VALIDATION_RESULT, PASS, FAIL, REASON,
+FIX_PLAN, REGRESS_TO, stage names, artifact section headers) MUST stay verbatim
+in English. See your agent's "Output Language" section for the exact list.
 
 [ATTACHED ARTIFACTS]
 REQUIREMENTS: requirements.md
@@ -123,7 +126,7 @@ or (regress to a previous stage — only when the validator agent supports it; e
 From the text returned by the sub-agent:
 
 - Extract `VALIDATION_RESULT: (PASS|FAIL)`
-- If neither matches, **treat as a runtime error, do not increment iteration**. Report to the user and exit.
+- If neither matches, **treat as a runtime error, do not increment iteration**. Print `messages.parse_error` and exit.
 - If `VALIDATION_RESULT: FAIL`, also try to extract `REGRESS_TO: <STAGE>`. If present and the value is one of `REQUIREMENTS|ROADMAP|DEVELOPMENT|REVIEW`, set the internal flag `regressTo = <STAGE>` (overrides any value set in step 2). Otherwise leave `regressTo` unset.
 
 ### 5a. PASS handling
@@ -136,19 +139,11 @@ Update `state.json` (Edit):
 - `failures` → `[]` (reset accumulated failures on PASS)
 - `history` → append `{ stage, completedAt }` to the existing array
 
-Output:
+Print `messages.validation_passed` populated with `<prev>` and `<next>`.
 
-```
-Validation passed: <prev stage> -> <next stage>
-```
+Only when invoked directly (`/harness:validate` standalone), also print `messages.next_hint`.
 
-Only when invoked directly (`/harness:validate` standalone), also print the hint:
-
-```
-Next: /harness:run    (or /harness:retro if DONE)
-```
-
-Omit this hint when called inline within the `/harness:run` loop — run will continue the loop automatically.
+Omit `messages.next_hint` when called inline within the `/harness:run` loop — run will continue the loop automatically.
 
 ### 5b. FAIL handling
 
@@ -174,30 +169,96 @@ Update `state.json` (Edit):
   }
   ```
 
-Output (when `regressTo` is unset):
+If `regressTo` is unset, print `messages.validation_failed` populated with `<stage>`, `<cause>`, `<plan>`, `<remaining>`.
+If `regressTo` is set and applied, print `messages.validation_failed_regress` populated with `<stage>`, `<regressTo>`, `<cause>`, `<plan>`, `<remaining>`.
 
-```
-Validation failed: <stage>
-Cause:      <cause>
-Fix plan:   <plan>
+If `new iteration >= maxRetries`, additionally print `messages.retry_limit_reached`.
 
-Retries remaining: <maxRetries - new iteration>
-```
+---
 
-Output (when `regressTo` is set and applied):
+## Messages
 
-```
-Validation failed: <stage>  → regressing to <regressTo>
-Cause:      <cause>
-Fix plan:   <plan>
+Look up by `config.uiLanguage`. Substitute `{...}` placeholders before printing.
 
-Retries remaining: <maxRetries - new iteration>
-```
+### `already_done`
 
-If `new iteration >= maxRetries`, add:
+- **en**: `Done. /harness:retro recommended`
+- **ko**: `완료. /harness:retro 권장`
 
-```
-Retry limit reached — user intervention required.
-Modify agent instructions (.harness/agents or plugin agents/) or requirements,
-then reset with /harness:reset.
-```
+### `deterministic_cause`
+
+- **en**: `Deterministic validation failed — {label}={status}(exit {code})`
+- **ko**: `결정론 검증 실패 — {label}={status}(exit {code})`
+
+### `deterministic_plan`
+
+- **en**: `Resolve {label}({command}) failure first. Log: {logPath}`
+- **ko**: `먼저 {label}({command}) 실패를 해결하세요. 로그: {logPath}`
+
+### `parse_error`
+
+- **en**: `Validator returned malformed output (no VALIDATION_RESULT line). Treating as runtime error; iteration not incremented. Re-run /harness:validate or /harness:run to retry.`
+- **ko**: `검증 에이전트 출력이 형식에 맞지 않습니다(VALIDATION_RESULT 라인 없음). 런타임 오류로 처리하며 iteration은 증가하지 않습니다. /harness:validate 또는 /harness:run을 다시 실행해 재시도하세요.`
+
+### `validation_passed`
+
+- **en**: `Validation passed: {prev} -> {next}`
+- **ko**: `검증 통과: {prev} -> {next}`
+
+### `next_hint`
+
+- **en**: `Next: /harness:run    (or /harness:retro if DONE)`
+- **ko**: `다음: /harness:run    (DONE이면 /harness:retro)`
+
+### `validation_failed`
+
+- **en**:
+  ```
+  Validation failed: {stage}
+  Cause:      {cause}
+  Fix plan:   {plan}
+
+  Retries remaining: {remaining}
+  ```
+- **ko**:
+  ```
+  검증 실패: {stage}
+  원인:        {cause}
+  수정 계획:   {plan}
+
+  남은 재시도: {remaining}
+  ```
+
+### `validation_failed_regress`
+
+- **en**:
+  ```
+  Validation failed: {stage}  → regressing to {regressTo}
+  Cause:      {cause}
+  Fix plan:   {plan}
+
+  Retries remaining: {remaining}
+  ```
+- **ko**:
+  ```
+  검증 실패: {stage}  → {regressTo}로 회귀
+  원인:        {cause}
+  수정 계획:   {plan}
+
+  남은 재시도: {remaining}
+  ```
+
+### `retry_limit_reached`
+
+- **en**:
+  ```
+  Retry limit reached — user intervention required.
+  Modify agent instructions (.harness/agents or plugin agents/) or requirements,
+  then reset with /harness:reset.
+  ```
+- **ko**:
+  ```
+  재시도 한도 도달 — 사용자 개입이 필요합니다.
+  에이전트 지침(.harness/agents 또는 플러그인 agents/)이나 요구사항을 수정한 뒤
+  /harness:reset으로 초기화하세요.
+  ```

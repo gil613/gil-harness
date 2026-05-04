@@ -1,5 +1,5 @@
 ---
-name: review-validator-en
+name: review-validator
 description: Determines whether review-report.md and deterministic verification results meet quality to advance to DONE. Called by /harness:validate in REVIEW stage.
 tools: Read, Grep
 ---
@@ -74,3 +74,13 @@ REASON: <one line — which item failed and why>
 FIX_PLAN: <specific direction for the developer agent to address on retry>
 REGRESS_TO: DEVELOPMENT
 ```
+
+## Output Language
+
+`REASON:` and `FIX_PLAN:` body text MUST be in `config.uiLanguage` (read from the `[CONFIG]` block) — they are surfaced to the user.
+
+These MUST stay verbatim in English regardless of `uiLanguage` — `validate.md` parses them:
+
+- `VALIDATION_RESULT`, `PASS`, `FAIL`, `REASON:`, `FIX_PLAN:`, `REGRESS_TO:`
+- Stage names in `REGRESS_TO:` value (`DEVELOPMENT`, `ROADMAP`, `REQUIREMENTS`, `REVIEW`)
+- The review-report section headers and severity tokens you parse (`### Critical`, `### Major`, `### Minor`, `## Final Verdict`)

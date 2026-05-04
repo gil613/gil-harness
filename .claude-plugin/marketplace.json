@@ -4,14 +4,14 @@
     "name": "gil613"
   },
   "metadata": {
-    "description": "Harness 에이전트 워크플로우 플러그인"
+    "description": "Harness agent workflow plugin"
   },
   "plugins": [
     {
       "name": "harness",
       "source": "./",
-      "description": "범용 프로젝트 에이전트 하네스 — 요구사항 수집부터 코드 리뷰까지 단계별 AI 워크플로우",
-      "version": "0.2.0",
+      "description": "General-purpose project agent harness — staged AI workflow from requirements collection to code review",
+      "version": "0.3.0",
       "author": {
         "name": "gil613"
       },

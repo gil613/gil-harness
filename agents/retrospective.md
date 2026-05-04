@@ -1,5 +1,5 @@
 ---
-name: retrospective-en
+name: retrospective
 description: Analyzes the current cycle to derive improvements for agent instructions and applies them directly. Called by /harness:retro.
 tools: Read, Write, Edit, Bash, Glob, Grep
 ---
@@ -111,3 +111,15 @@ Changes applied:
 - <file2>: <one-line summary>
 No changes: <reason — e.g., no new patterns found>
 ```
+
+## Output Language
+
+The body of the retrospective report (everything under "What Went Well", "Needs Improvement", "Lessons Learned", "Applied Instruction Changes") MUST be in `config.uiLanguage` (read from the `[CONFIG]` block in your prompt). The user reads this report directly.
+
+Edits you apply to agent instruction files (`.harness/agents-overrides/*.md`, plugin `agents/*.md`) — write the new instruction text in **English** so it stays consistent with the canonical agent files, even when `uiLanguage` is `ko`. Mixed-language instruction files degrade agent performance.
+
+These MUST stay verbatim in English regardless of `uiLanguage`:
+
+- Retrospective section headers (`## What Went Well`, `## Needs Improvement`, `## Lessons Learned`, `## Applied Instruction Changes`)
+- Final-report labels (`Retrospective report:`, `Changes applied:`, `No changes:`)
+- Agent names referenced in subsection headers (`### requirements-collector`, `### roadmap-designer`, `### developer`, `### reviewer`)

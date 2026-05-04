@@ -1,3 +1,9 @@
+> 📖 **참고용 사본 (한국어 번역)**
+>
+> 이 파일은 한국 사용자가 내부 동작을 이해하기 위한 **읽기 전용 참조**입니다.
+> Claude Code 플러그인은 이 파일을 사용하지 않습니다 — 정본은 `agents/requirements-collector.md` (영어)입니다.
+> 자동 동기화되지 않으므로 정본과 어긋날 수 있습니다. 동작 검증은 항상 정본 기준으로 수행하세요.
+
 ---
 name: requirements-collector
 description: 사용자 문답을 통해 프로젝트 요구사항을 상세화한다. 임의 추가 금지. /harness:run 이 REQUIREMENTS 단계에서 호출.

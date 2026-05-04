@@ -20,42 +20,28 @@ Loop order: REQUIREMENTS → ROADMAP → DEVELOPMENT → REVIEW → DONE
 ### LOOP-1. Load state
 
 - Read `.harness/state.json` and `.harness/config.json`
-- If `state.stage === 'DONE'`, print and stop the loop:
-  - "All stages complete. /harness:retro recommended"
-- If `state.iteration >= state.maxRetries`, print and stop the loop:
-  - "Retry limit reached — modify agent instructions or requirements, then /harness:reset"
-
-All subsequent output follows `config.uiLanguage`.
+- Read `config.uiLanguage` — all subsequent user-facing output uses messages from the `## Messages` table below, keyed by this value
+- If `state.stage === 'DONE'`, print `messages.all_done` and stop the loop
+- If `state.iteration >= state.maxRetries`, print `messages.retry_limit` and stop the loop
 
 ---
 
 ### LOOP-2. Acknowledge previous failure (if any)
 
-If the last entry in `state.failures` matches the current stage, print:
-
-```
-Previous failure cause: <cause>
-Fix plan:               <plan>
-```
-
-This information is also passed to the worker sub-agent (LOOP-3).
+If the last entry in `state.failures` matches the current stage, print `messages.previous_failure` populated with `<cause>` and `<plan>`. This information is also passed to the worker sub-agent (LOOP-3).
 
 ---
 
 ### LOOP-3. Call worker sub-agent
 
-Check `config.uiLanguage` to determine the sub-agent. If `"en"`, use the `-en` suffix agent.
-
 stage → sub-agent mapping:
 
-| stage | uiLanguage=ko | uiLanguage=en |
-|-------|---------------|---------------|
-| REQUIREMENTS | requirements-collector | requirements-collector-en |
-| ROADMAP | roadmap-designer | roadmap-designer-en |
-| DEVELOPMENT | developer | developer-en |
-| REVIEW | reviewer | reviewer-en |
-
-If `config.uiLanguage` is missing or `"ko"`, use the Korean agents.
+| stage | sub-agent |
+|-------|-----------|
+| REQUIREMENTS | requirements-collector |
+| ROADMAP | roadmap-designer |
+| DEVELOPMENT | developer |
+| REVIEW | reviewer |
 
 #### Load overrides
 
@@ -71,6 +57,14 @@ Call via the `Task` tool. Omit blocks that do not apply:
 
 [CONFIG]
 <full .harness/config.json>
+
+[OUTPUT LANGUAGE]
+{config.uiLanguage}
+
+All free-form text in your artifact bodies, your one-line caller report, and any user-visible
+narrative MUST be in this language. Protocol identifiers (section headers like "## Done",
+result labels like "VALIDATION_RESULT:", task IDs like "T01", AC IDs like "AC1") MUST stay
+verbatim in English. See your agent's "Output Language" section for the exact list.
 
 [PREVIOUS ARTIFACTS]
 ROADMAP: requirements.md
@@ -93,12 +87,7 @@ Report in one line when done.
 
 #### Worker failure handling
 
-If the sub-agent fails or aborts, do not change state and stop the loop:
-
-```
-Worker agent failed: <reason>
-Re-run /harness:run to retry
-```
+If the sub-agent fails or aborts, do not change state and stop the loop. Print `messages.worker_failed` populated with `<reason>`.
 
 (Distinguish from a validation failure — do not increment the iteration counter)
 
@@ -120,19 +109,100 @@ Branch based on the validate result and updated state.
 
 `state.json` is already updated to the next stage. Re-read the state.
 
-- If new `state.stage === 'DONE'`:
-  - "✓ Full pipeline complete (REQUIREMENTS→ROADMAP→DEVELOPMENT→REVIEW→DONE)\n   Run /harness:retro"
-  - Stop loop
-- Otherwise, print one line of progress and **return to LOOP-1**:
-  - "✓ <prev stage> done → starting <new stage>"
+- If new `state.stage === 'DONE'`: print `messages.full_pipeline_done` and stop the loop
+- Otherwise: print `messages.stage_advanced` populated with `<prev>` and `<new>`, then **return to LOOP-1**
 
 #### 5b. FAIL
 
 `state.json`'s `iteration` is already incremented by 1.
 
 - If `state.iteration < state.maxRetries`:
-  - "✗ <stage> validation failed (attempt <iteration>/<maxRetries>)\n   Cause: <cause>\n   Fix plan: <plan>\n   → Retrying same stage..."
+  - Print `messages.stage_failed_retry` populated with `<stage>`, `<iteration>`, `<maxRetries>`, `<cause>`, `<plan>`
   - **Return to LOOP-1** (state is already updated, re-run the same stage)
 - If `state.iteration >= state.maxRetries`:
-  - "✗ <stage> retry limit reached — user intervention required\n   Modify agent overrides (.harness/agents-overrides/) or requirements,\n   then reset with /harness:reset"
+  - Print `messages.retry_limit_reached` populated with `<stage>`
   - Stop loop
+
+---
+
+## Messages
+
+Look up by `config.uiLanguage`. Substitute `{...}` placeholders before printing.
+
+### `all_done`
+
+- **en**: `All stages complete. /harness:retro recommended`
+- **ko**: `모든 단계 완료. /harness:retro 권장`
+
+### `retry_limit`
+
+- **en**: `Retry limit reached — modify agent instructions or requirements, then /harness:reset`
+- **ko**: `재시도 한도 도달 — 에이전트 지침이나 요구사항을 수정한 뒤 /harness:reset`
+
+### `previous_failure`
+
+- **en**:
+  ```
+  Previous failure cause: {cause}
+  Fix plan:               {plan}
+  ```
+- **ko**:
+  ```
+  이전 실패 원인: {cause}
+  수정 계획:      {plan}
+  ```
+
+### `worker_failed`
+
+- **en**:
+  ```
+  Worker agent failed: {reason}
+  Re-run /harness:run to retry
+  ```
+- **ko**:
+  ```
+  작업 에이전트 실패: {reason}
+  /harness:run을 다시 실행해 재시도하세요
+  ```
+
+### `full_pipeline_done`
+
+- **en**: `✓ Full pipeline complete (REQUIREMENTS→ROADMAP→DEVELOPMENT→REVIEW→DONE)\n   Run /harness:retro`
+- **ko**: `✓ 전체 파이프라인 완료 (REQUIREMENTS→ROADMAP→DEVELOPMENT→REVIEW→DONE)\n   /harness:retro 실행`
+
+### `stage_advanced`
+
+- **en**: `✓ {prev} done → starting {new}`
+- **ko**: `✓ {prev} 완료 → {new} 시작`
+
+### `stage_failed_retry`
+
+- **en**:
+  ```
+  ✗ {stage} validation failed (attempt {iteration}/{maxRetries})
+     Cause: {cause}
+     Fix plan: {plan}
+     → Retrying same stage...
+  ```
+- **ko**:
+  ```
+  ✗ {stage} 검증 실패 (시도 {iteration}/{maxRetries})
+     원인: {cause}
+     수정 계획: {plan}
+     → 같은 단계 재시도...
+  ```
+
+### `retry_limit_reached`
+
+- **en**:
+  ```
+  ✗ {stage} retry limit reached — user intervention required
+     Modify agent overrides (.harness/agents-overrides/) or requirements,
+     then reset with /harness:reset
+  ```
+- **ko**:
+  ```
+  ✗ {stage} 재시도 한도 도달 — 사용자 개입 필요
+     에이전트 오버라이드(.harness/agents-overrides/)나 요구사항을 수정한 뒤
+     /harness:reset으로 초기화
+  ```

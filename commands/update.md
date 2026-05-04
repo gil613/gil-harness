@@ -10,22 +10,21 @@ Run this after updating the plugin (`claude plugin update harness` or `git pull`
 What gets updated:
 - `.harness/config.json` — fill in fields added in the new version
 - `.harness/` subdirectories — create any directories required by the new version
+- `.harness/agents-overrides/*-en.md` — rename to `*.md` (sub-agent name change in v0.3.0)
 
 What is never touched:
 - `.harness/state.json` (progress state)
 - `.harness/*.md` artifacts (requirements, roadmap, progress, review-report)
 - `.harness/retrospectives/`
-- `.harness/agents-overrides/`
+- `.harness/agents-overrides/` body content (only filenames are renamed when needed)
 
 ## Procedure
 
 ### 1. Check initialization
 
-Read `.harness/config.json` and `.harness/state.json`. If missing, print and exit:
+Read `.harness/config.json` and `.harness/state.json`. If missing, print `messages.not_initialized` and exit.
 
-"Not initialized — run /harness:init first"
-
-Read `uiLanguage` to determine the output language for all subsequent output.
+Read `uiLanguage`. All subsequent user-facing output uses messages from the `## Messages` table below.
 
 ### 2. Patch config.json schema
 
@@ -54,12 +53,58 @@ mkdir -p .harness/logs
 
 Add to this list when new directories are introduced in future versions.
 
-### 4. Completion report
+### 4. Migrate agents-overrides filenames (v0.3.0 breaking change)
 
-Output only changed items. If nothing changed, report "already up to date".
+In v0.3.0, sub-agent names lost the `-en` suffix (e.g., `developer-en` → `developer`). User overrides keyed by the old name become orphans. Rename them.
 
-```
-Update complete:
-  config.json  — <added fields> (or "no changes")
-  Directories  — <created list> (or "no changes")
-```
+Glob `.harness/agents-overrides/*-en.md`. For each match:
+
+- Compute new path: drop the `-en` segment immediately before `.md` (e.g., `developer-en.md` → `developer.md`)
+- If the new path does not exist: rename the file
+  ```bash
+  mv .harness/agents-overrides/<old>.md .harness/agents-overrides/<new>.md
+  ```
+- If the new path already exists: do **not** overwrite. Add the file to a `conflicts` list to surface in the completion report.
+
+Track the rename count and conflicts list for the completion report.
+
+If the `.harness/agents-overrides/` directory does not exist, skip this step entirely.
+
+### 5. Completion report
+
+Print `messages.complete` populated with `<configChanges>`, `<dirChanges>`, `<renameCount>`, `<conflicts>`. Substitute `messages.no_changes` for any subsection with no work done.
+
+---
+
+## Messages
+
+Look up by `uiLanguage`. Substitute `{...}` placeholders before printing.
+
+### `not_initialized`
+
+- **en**: `Not initialized — run /harness:init first`
+- **ko**: `초기화되지 않음 — 먼저 /harness:init 실행`
+
+### `no_changes`
+
+- **en**: `no changes`
+- **ko**: `변경 없음`
+
+### `complete`
+
+- **en**:
+  ```
+  Update complete:
+    config.json        — {configChanges}
+    Directories        — {dirChanges}
+    Overrides renamed  — {renameCount}
+    Rename conflicts   — {conflicts}
+  ```
+- **ko**:
+  ```
+  업데이트 완료:
+    config.json        — {configChanges}
+    디렉터리           — {dirChanges}
+    오버라이드 rename  — {renameCount}
+    rename 충돌        — {conflicts}
+  ```

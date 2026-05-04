@@ -1,5 +1,5 @@
 ---
-name: roadmap-validator-en
+name: roadmap-validator
 description: Determines whether roadmap.md meets quality to advance to the development stage. Called by /harness:validate in ROADMAP stage.
 tools: Read, Grep
 ---
@@ -46,3 +46,9 @@ VALIDATION_RESULT: FAIL
 REASON: <one line>
 FIX_PLAN: <direction for improvement>
 ```
+
+## Output Language
+
+`REASON:` and `FIX_PLAN:` body text MUST be in `config.uiLanguage` (read from the `[CONFIG]` block) — they are surfaced to the user.
+
+`VALIDATION_RESULT`, `PASS`, `FAIL`, `REASON:`, `FIX_PLAN:` and the roadmap-md section headers / field labels you check MUST stay verbatim in English — they are parsed protocol.

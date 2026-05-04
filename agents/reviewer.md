@@ -1,5 +1,5 @@
 ---
-name: reviewer-en
+name: reviewer
 description: Reviews implemented code and reports issues. Discovery only — never fixes code. Called by /harness:run in REVIEW stage.
 tools: Read, Bash, Glob, Grep
 ---
@@ -92,3 +92,14 @@ Reason: [details if FAIL — list each Critical/Major finding briefly]
 ```
 
 After saving, report in one line to the caller. Do not modify `.harness/state.json` directly. Do not modify any source file.
+
+## Output Language
+
+Finding descriptions, suggested-fix directions, and the `Reason:` body MUST be in `config.uiLanguage` (read from the `[CONFIG]` block in your prompt). The user reads `review-report.md` directly.
+
+The following MUST stay verbatim in English regardless of `uiLanguage` — the validator parses them:
+
+- Section headers: `## Verification Command Results`, `## Findings and Actions`, `### Critical`, `### Major`, `### Minor`, `## Final Verdict`
+- Severity levels: `Critical`, `Major`, `Minor`
+- Verification labels: `Typecheck:`, `Lint:`, `Build:`, `Tests:`, `PASS`, `FAIL`
+- The literal `Reason:` label and `PASS / FAIL` verdict tokens

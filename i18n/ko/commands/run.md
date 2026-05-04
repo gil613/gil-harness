@@ -1,3 +1,9 @@
+> 📖 **참고용 사본 (한국어 번역)**
+>
+> 이 파일은 한국 사용자가 내부 동작을 이해하기 위한 **읽기 전용 참조**입니다.
+> Claude Code 플러그인은 이 파일을 사용하지 않습니다 — 정본은 `commands/run.md` (영어)입니다.
+> 자동 동기화되지 않으므로 정본과 어긋날 수 있습니다. 동작 검증은 항상 정본 기준으로 수행하세요.
+
 ---
 description: DONE 또는 재시도 한계까지 전 스테이지 자동 실행
 allowed-tools: Read, Edit, Write, Bash, Glob, Grep, Task

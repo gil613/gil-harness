@@ -11,7 +11,7 @@ Initializes the harness in the current working directory. Auto-detects project f
 
 ### 1. Language Selection
 
-Ask the user to select a UI language. Ask only once:
+Ask the user to select a UI language. Ask only once. The prompt itself is bilingual; show it verbatim:
 
 ```
 Please select a language / 언어를 선택하세요:
@@ -19,12 +19,13 @@ Please select a language / 언어를 선택하세요:
   [en] English (default)
 ```
 
-Any input other than `ko` or `en` falls back to `en`. If no input is provided, treat as `en`.
-Store the selected value in the `uiLanguage` variable for use in subsequent steps.
+Any input other than `ko` or `en` falls back to `en`. If no input is provided, treat as `en`. Store the selected value in the `uiLanguage` variable.
+
+**From this step onward, all user-facing output uses messages from the `## Messages` table at the bottom of this file, keyed by `uiLanguage`.**
 
 ### 2. Check existing initialization
 
-If `.harness/state.json` already exists, stop immediately and inform the user. Never overwrite.
+If `.harness/state.json` already exists, print `messages.already_initialized` and stop. Never overwrite.
 
 ### 3. Auto-detect project
 
@@ -53,18 +54,7 @@ Framework detection (package.json deps): `next`, `nuxt`, `react`, `vue`, `svelte
 
 ### 4. Confirm with user
 
-Show the table in English. Do not ask for each field individually — only update the fields the user specifies.
-
-```
-Project name:       <detected>
-Language/Framework: <detected>
-Test:               <detected>
-Lint:               <detected>
-Typecheck:          <detected>
-Build:              <detected>
-Dev server:         <detected>
-Max stage retries:  3
-```
+Show `messages.confirm_table` populated with the detected values. Do not ask for each field individually — only update fields the user specifies.
 
 `maxRetries` accepts integers only. Falls back to 3 on invalid input.
 
@@ -81,12 +71,12 @@ Empty strings are allowed (the corresponding check will be SKIPPED).
 
 ### 5. Create files
 
-**`.harness/config.json`** (including `uiLanguage` field):
+**`.harness/config.json`** (set `uiLanguage` to the value from step 1):
 ```json
 {
   "projectName": "...",
   "language": "...",
-  "uiLanguage": "en",
+  "uiLanguage": "ko",
   "testCmd": "...",
   "lintCmd": "...",
   "typecheckCmd": "...",
@@ -94,8 +84,6 @@ Empty strings are allowed (the corresponding check will be SKIPPED).
   "devCmd": "..."
 }
 ```
-
-Set `uiLanguage` to the value selected in step 1 (`"ko"` or `"en"`).
 
 **`.harness/state.json`**:
 ```json
@@ -120,14 +108,71 @@ Do not create artifact files (`requirements.md`, `roadmap.md`, `progress.md`, `r
 
 ### 6. Completion report
 
-```
-Initialized: <projectName>
+Print `messages.completion` populated with `<projectName>`.
 
-Files created:
-  .harness/config.json
-  .harness/state.json
+---
 
-Next steps:
-  /harness:status   check current status
-  /harness:run      start requirements collection
-```
+## Messages
+
+Look up by `uiLanguage`. Substitute `{name}`, `{detected.*}` placeholders before printing.
+
+### `already_initialized`
+
+- **en**: `.harness already exists. Aborting to avoid overwrite. Run /harness:status to see current state, or /harness:uninstall to reset.`
+- **ko**: `.harness가 이미 존재합니다. 덮어쓰기를 피하기 위해 중단합니다. 현재 상태는 /harness:status, 초기화는 /harness:uninstall을 사용하세요.`
+
+### `confirm_table`
+
+- **en**:
+  ```
+  Project name:       {detected.projectName}
+  Language/Framework: {detected.language}
+  Test:               {detected.testCmd}
+  Lint:               {detected.lintCmd}
+  Typecheck:          {detected.typecheckCmd}
+  Build:              {detected.buildCmd}
+  Dev server:         {detected.devCmd}
+  Max stage retries:  3
+
+  Reply with field names to change, or "ok" to accept.
+  ```
+- **ko**:
+  ```
+  프로젝트명:         {detected.projectName}
+  언어/프레임워크:    {detected.language}
+  테스트:             {detected.testCmd}
+  린트:               {detected.lintCmd}
+  타입체크:           {detected.typecheckCmd}
+  빌드:               {detected.buildCmd}
+  개발 서버:          {detected.devCmd}
+  단계 재시도 한도:   3
+
+  변경할 항목명을 알려주거나, "ok"로 확정하세요.
+  ```
+
+### `completion`
+
+- **en**:
+  ```
+  Initialized: {name}
+
+  Files created:
+    .harness/config.json
+    .harness/state.json
+
+  Next steps:
+    /harness:status   check current status
+    /harness:run      start requirements collection
+  ```
+- **ko**:
+  ```
+  초기화 완료: {name}
+
+  생성된 파일:
+    .harness/config.json
+    .harness/state.json
+
+  다음 단계:
+    /harness:status   현재 상태 확인
+    /harness:run      요구사항 수집 시작
+  ```

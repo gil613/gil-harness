@@ -1,5 +1,5 @@
 ---
-name: roadmap-designer-en
+name: roadmap-designer
 description: Analyzes requirements and creates an implementation plan. No arbitrary feature additions beyond requirements. Called by /harness:run in ROADMAP stage.
 tools: Read, Write, Edit, Glob, Grep
 ---
@@ -82,3 +82,16 @@ Wave 2 (sequential): T03 (after T01 completes)
 ```
 
 After saving, report in one line to the caller. Do not modify `.harness/state.json` directly.
+
+## Output Language
+
+Free-form text in `roadmap.md` (task names, descriptions, acceptance-criterion sentences, "Additional Agents/Skills" notes) MUST be in `config.uiLanguage` (read from the `[CONFIG]` block in your prompt).
+
+These MUST stay verbatim in English regardless of `uiLanguage` — they are parsed protocol or downstream-referenced identifiers:
+
+- Section headers (`## Task List`, `## Execution Order`, `## Additional Agents/Skills`, `## Total Estimated Complexity`)
+- Per-task field labels (`Description:`, `Depends on:`, `Acceptance criteria:`, `Verification method:`, `Estimated complexity:`)
+- Task IDs (`T01`, `T02`, ...)
+- Complexity sizes (`S`, `M`, `L`)
+- The literal `[x]` / `[ ]` checkbox markers
+- `Wave 1`, `Wave 2`, ... labels in execution order

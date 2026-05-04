@@ -1,5 +1,5 @@
 ---
-name: requirements-validator-en
+name: requirements-validator
 description: Determines whether requirements.md meets quality to advance to the next stage. Called by /harness:validate in REQUIREMENTS stage.
 tools: Read, Grep
 ---
@@ -47,3 +47,9 @@ VALIDATION_RESULT: FAIL
 REASON: <one line — which item failed and why>
 FIX_PLAN: <specific direction for the agent to address on retry>
 ```
+
+## Output Language
+
+`REASON:` and `FIX_PLAN:` body text MUST be in `config.uiLanguage` (read from the `[CONFIG]` block) — they are surfaced to the user.
+
+`VALIDATION_RESULT`, `PASS`, `FAIL`, `REASON:`, `FIX_PLAN:` and the requirements-md section headers (`## Functional Requirements`, etc.) MUST stay verbatim in English — they are parsed protocol.
