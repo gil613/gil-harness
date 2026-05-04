@@ -109,7 +109,10 @@ Branch based on the validate result and updated state.
 
 `state.json` is already updated to the next stage. Re-read the state.
 
-- If new `state.stage === 'DONE'`: print `messages.full_pipeline_done` and stop the loop
+- If new `state.stage === 'DONE'`:
+  - Print `messages.full_pipeline_done`
+  - **Execute the retro.md procedure inline within this session** (skip the dirty-tree check — step 1 of retro.md)
+  - Stop the loop after retro completes
 - Otherwise: print `messages.stage_advanced` populated with `<prev>` and `<new>`, then **return to LOOP-1**
 
 #### 5b. FAIL
@@ -167,8 +170,8 @@ Look up by `config.uiLanguage`. Substitute `{...}` placeholders before printing.
 
 ### `full_pipeline_done`
 
-- **en**: `✓ Full pipeline complete (REQUIREMENTS→ROADMAP→DEVELOPMENT→REVIEW→DONE)\n   Run /harness:retro`
-- **ko**: `✓ 전체 파이프라인 완료 (REQUIREMENTS→ROADMAP→DEVELOPMENT→REVIEW→DONE)\n   /harness:retro 실행`
+- **en**: `✓ Full pipeline complete (REQUIREMENTS→ROADMAP→DEVELOPMENT→REVIEW→DONE) — running retrospective…`
+- **ko**: `✓ 전체 파이프라인 완료 (REQUIREMENTS→ROADMAP→DEVELOPMENT→REVIEW→DONE) — 회고 실행 중…`
 
 ### `stage_advanced`
 
