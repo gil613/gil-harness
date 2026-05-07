@@ -141,12 +141,16 @@ validate 결과와 갱신된 state를 기준으로 분기한다.
 
 #### 5b. FAIL
 
-state.json의 `iteration`이 이미 +1 증가되어 있다.
+state.json의 `iteration`이 이미 +1 증가되어 있다. state.json을 다시 읽는다 — validate가 이전 스테이지로 회귀했을 수 있다.
 
 - `state.iteration < state.maxRetries`이면:
-  - ko: "✗ <stage> 검증 실패 (시도 <iteration>/<maxRetries>)\n   원인: <cause>\n   수정 계획: <plan>\n   → 동일 스테이지 재시도 중..."
-  - en: "✗ <stage> validation failed (attempt <iteration>/<maxRetries>)\n   Cause: <cause>\n   Fix plan: <plan>\n   → Retrying same stage..."
-  - **LOOP-1로 돌아간다** (state는 이미 갱신됨, 동일 stage 재실행)
+  - `state.stage`가 방금 실행한 스테이지와 다르면 (회귀 발생):
+    - ko: "✗ <fromStage> 검증 실패 (시도 <iteration>/<maxRetries>) — <toStage>로 자동 회귀\n   원인: <cause>\n   수정 계획: <plan>\n   → 개발자 에이전트가 자동으로 수정합니다 — 루프 계속..."
+    - en: "✗ <fromStage> validation failed (attempt <iteration>/<maxRetries>) — regressing to <toStage>\n   Cause: <cause>\n   Fix plan: <plan>\n   → Developer agent will remediate automatically — continuing loop..."
+  - 동일 스테이지 재시도이면:
+    - ko: "✗ <stage> 검증 실패 (시도 <iteration>/<maxRetries>)\n   원인: <cause>\n   수정 계획: <plan>\n   → 동일 스테이지 재시도 중..."
+    - en: "✗ <stage> validation failed (attempt <iteration>/<maxRetries>)\n   Cause: <cause>\n   Fix plan: <plan>\n   → Retrying same stage..."
+  - **LOOP-1로 즉시 돌아간다 — 루프를 중단하거나 사용자에게 수동 조치를 요청하지 않는다**
 - `state.iteration >= state.maxRetries`이면:
   - ko: "✗ <stage> 재시도 한계 도달 — 사용자 개입 필요\n   에이전트 지침(.harness/agents-overrides/) 또는 요구사항 수정 후\n   /harness:reset 으로 iteration 리셋"
   - en: "✗ <stage> retry limit reached — user intervention required\n   Modify agent overrides (.harness/agents-overrides/) or requirements,\n   then reset with /harness:reset"

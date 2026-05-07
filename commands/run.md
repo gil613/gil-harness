@@ -117,11 +117,14 @@ Branch based on the validate result and updated state.
 
 #### 5b. FAIL
 
-`state.json`'s `iteration` is already incremented by 1.
+`state.json`'s `iteration` is already incremented by 1. Re-read `state.json` now — validate may have regressed to an earlier stage.
 
 - If `state.iteration < state.maxRetries`:
-  - Print `messages.stage_failed_retry` populated with `<stage>`, `<iteration>`, `<maxRetries>`, `<cause>`, `<plan>`
-  - **Return to LOOP-1** (state is already updated, re-run the same stage)
+  - If `state.stage` differs from the stage that just ran (regression occurred):
+    - Print `messages.stage_regressed_retry` populated with `<fromStage>`, `<toStage>`, `<iteration>`, `<maxRetries>`, `<cause>`, `<plan>`
+  - Else (same-stage retry):
+    - Print `messages.stage_failed_retry` populated with `<stage>`, `<iteration>`, `<maxRetries>`, `<cause>`, `<plan>`
+  - **Return to LOOP-1 immediately — do not stop, do not ask the user for action**
 - If `state.iteration >= state.maxRetries`:
   - Print `messages.retry_limit_reached` populated with `<stage>`
   - Stop loop
@@ -193,6 +196,23 @@ Look up by `config.uiLanguage`. Substitute `{...}` placeholders before printing.
      원인: {cause}
      수정 계획: {plan}
      → 같은 단계 재시도...
+  ```
+
+### `stage_regressed_retry`
+
+- **en**:
+  ```
+  ✗ {fromStage} validation failed (attempt {iteration}/{maxRetries}) — regressing to {toStage}
+     Cause: {cause}
+     Fix plan: {plan}
+     → Developer agent will remediate automatically — continuing loop...
+  ```
+- **ko**:
+  ```
+  ✗ {fromStage} 검증 실패 (시도 {iteration}/{maxRetries}) — {toStage}로 자동 회귀
+     원인: {cause}
+     수정 계획: {plan}
+     → 개발자 에이전트가 자동으로 수정합니다 — 루프 계속...
   ```
 
 ### `retry_limit_reached`
