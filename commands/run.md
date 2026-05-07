@@ -15,6 +15,15 @@ Loop order: REQUIREMENTS → ROADMAP → DEVELOPMENT → REVIEW → DONE
 
 **Repeat the following until DONE is reached or a stop condition occurs.**
 
+### Loop discipline (CRITICAL)
+
+This procedure is a tight tool-driven loop. The session must NOT end between iterations. Apply these rules at every step:
+
+- **Never end your turn with plain text.** Every step that prints user-facing text must be immediately followed by the next required tool call in the same turn.
+- **No summaries, no status reports, no "I will now..." narration** between steps. Print only the literal `messages.*` strings defined below; everything else is wasted text that risks ending the turn.
+- After any tool returns (Task, Read, Bash, Edit, etc.), the very next action is whatever the procedure dictates — proceed without commentary.
+- The only legitimate stop conditions are: `state.stage === 'DONE'`, `state.iteration >= state.maxRetries`, worker sub-agent failure, or retro completion in 5a-DONE. Anywhere else, stopping is a bug.
+
 ---
 
 ### LOOP-1. Load state
@@ -29,6 +38,8 @@ Loop order: REQUIREMENTS → ROADMAP → DEVELOPMENT → REVIEW → DONE
 ### LOOP-2. Acknowledge previous failure (if any)
 
 If the last entry in `state.failures` matches the current stage, print `messages.previous_failure` populated with `<cause>` and `<plan>`. This information is also passed to the worker sub-agent (LOOP-3).
+
+**WITHOUT generating any further text, immediately proceed to LOOP-3 by issuing the Task tool call as the very next action.** If no previous failure exists, also proceed straight to LOOP-3 with no narration.
 
 ---
 
@@ -91,6 +102,10 @@ If the sub-agent fails or aborts, do not change state and stop the loop. Print `
 
 (Distinguish from a validation failure — do not increment the iteration counter)
 
+#### After Task returns (normal completion)
+
+When the Task tool returns successfully, **WITHOUT generating any further text and without summarizing the worker's output, immediately begin LOOP-4** by issuing the first tool call required by the validate.md procedure as the very next action.
+
 ---
 
 ### LOOP-4. Run validation (inline validate.md procedure)
@@ -98,6 +113,8 @@ If the sub-agent fails or aborts, do not change state and stop the loop. Print `
 If the worker finishes normally, **execute the validate.md procedure inline within this session**.
 
 Perform the full validate.md procedure inline and hold the PASS / FAIL result as an internal variable.
+
+**When validate.md completes (state.json has been updated), WITHOUT generating any further text, immediately call `Read .harness/state.json` as the very next action to begin LOOP-5.** Do not summarize validation results — LOOP-5 will print the appropriate message.
 
 ---
 
