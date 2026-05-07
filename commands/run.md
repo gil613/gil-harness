@@ -113,7 +113,7 @@ Branch based on the validate result and updated state.
   - Print `messages.full_pipeline_done`
   - **Execute the retro.md procedure inline within this session** (skip the dirty-tree check — step 1 of retro.md)
   - Stop the loop after retro completes
-- Otherwise: print `messages.stage_advanced` populated with `<prev>` and `<new>`, then **return to LOOP-1**
+- Otherwise: print `messages.stage_advanced` populated with `<prev>` and `<new>`, then **immediately return to LOOP-1 — do NOT stop, do NOT return control to the user, do NOT wait for input**
 
 #### 5b. FAIL
 
