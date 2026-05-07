@@ -7,6 +7,10 @@ allowed-tools: Read, Edit, Write, Bash, Task, Glob
 
 Analyzes the failure patterns of this cycle and incorporates the lessons learned directly into `.harness/agents-overrides/` or the plugin agent instructions.
 
+### Discipline (when invoked inline from `/harness:run`)
+
+When this procedure runs inline inside `/harness:run` (LOOP-1 auto-recovery or LOOP-5a DONE branch), the parent's **0-character output budget between tool calls** rule still applies: only the final `messages.complete` print is user-visible; intermediate Reads, Edits, the Task call, and post-patch integrity checks must run back-to-back with no narration. Do not announce "I will now read state.json" or summarize the retrospective sub-agent's report.
+
 ## Procedure
 
 ### 1. Check git working tree (optional)

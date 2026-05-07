@@ -10,6 +10,10 @@ Judges whether the current stage artifacts meet the quality bar to advance to th
 1. **Deterministic validation** — run typecheck/lint/test/build directly via Bash in the parent session
 2. **Inferential validation** — a validation sub-agent (Task) judges artifact quality
 
+### Discipline (when invoked inline from `/harness:run`)
+
+This procedure runs inside `/harness:run`'s tight tool-driven loop. The same **0-character output budget between tool calls** rule applies: the only user-visible text is the literal `messages.*` strings the procedure mandates and the deterministic results table. No greetings, no plan announcements, no summaries of intermediate Reads, no "I will now run typecheck…" narration. Read → Bash → Bash → Task → Edit, with mandated message prints inserted only where the procedure says so.
+
 ## Procedure
 
 ### 1. Load state

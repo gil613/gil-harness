@@ -20,18 +20,35 @@ If the user passed any text after `/harness:run` (i.e. `$ARGUMENTS` is non-empty
 
 **Repeat the following until DONE is reached or a stop condition occurs.**
 
-### Loop discipline (CRITICAL)
+### Loop discipline (CRITICAL — ZERO TOLERANCE)
 
-This procedure is a tight tool-driven loop. The session must NOT end between iterations. Apply these rules at every step:
+You have a **0-character output budget between tool calls**. The ONLY user-visible text allowed in this entire procedure is the literal `messages.*` strings the procedure explicitly mandates printing (e.g. `messages.previous_failure`, `messages.stage_advanced`). After every tool return, the next action MUST be either (a) a tool call, or (b) a mandated `messages.*` print followed immediately by the next tool call. No exceptions.
 
-- **Never end your turn with plain text.** Every step that prints user-facing text must be immediately followed by the next required tool call in the same turn.
-- **No summaries, no status reports, no "I will now..." narration** between steps. Print only the literal `messages.*` strings defined below; everything else is wasted text that risks ending the turn.
-- After any tool returns (Task, Read, Bash, Edit, etc.), the very next action is whatever the procedure dictates — proceed without commentary.
-- The only legitimate stop conditions are: `state.stage === 'DONE'`, `state.iteration >= state.maxRetries`, worker sub-agent failure, or retro completion in 5a-DONE. Anywhere else, stopping is a bug.
+**Forbidden patterns — DO NOT generate ANY of these, even once:**
+
+- Intro / greeting before first tool call: ❌ `상태를 확인하고 파이프라인을 시작하겠습니다`, ❌ `Let me check the state…`, ❌ `Starting the pipeline`
+- Status summaries after a Read: ❌ `현재 상태: DEVELOPMENT 단계, 반복 1/3`, ❌ `I see we're in iteration 1/3`, ❌ `이전 실패를 수정하겠습니다`
+- Plan announcements before the next tool call: ❌ `로드맵에서 ...를 찾겠습니다`, ❌ `I will now read…`, ❌ `다음으로 ...를 진행`
+- Step labels: ❌ `LOOP-1 실행 중`, ❌ `Step 3: …`, ❌ `Now executing validate.md`
+- Tool acknowledgments: ❌ `파일을 읽었습니다`, ❌ `Read complete`, ❌ `Got it`
+- Apologies, hedges, transitional connectors
+
+Every one of these phrases costs 30–80 tokens and they accumulate into thousands across a full pipeline run. The user has explicitly objected to this verbosity — treat any such output as a procedural violation.
+
+**Allowed user-visible output:**
+
+- Literal `messages.*` strings the procedure mandates (`messages.cycle_resumed`, `messages.auto_retro`, `messages.previous_failure`, `messages.stage_advanced`, `messages.full_pipeline_done`, `messages.stage_failed_retry`, `messages.stage_regressed_retry`, `messages.retry_limit`, `messages.retry_limit_reached`, `messages.worker_failed`)
+- The retro report summary that retro.md itself prints at the end of LOOP-5a (it is part of retro.md's output, not yours to embellish)
+
+**Stop conditions** — only here may you stop without immediately issuing the next tool call: `state.iteration >= state.maxRetries`, worker sub-agent failure, retro completion in 5a-DONE. Anywhere else, stopping or narrating is a bug.
+
+**Self-check before any non-tool output**: ask yourself "is this the literal text of a `messages.*` entry the procedure mandates?" If no, do not emit it — issue the next tool call instead.
 
 ---
 
 ### LOOP-1. Load state
+
+(Discipline reminder: your **first** action on `/harness:run` is the Read tool call below. Do NOT emit any greeting, plan, or status preamble. The user does not need to be told you are about to read state.)
 
 - Read `.harness/state.json` and `.harness/config.json`
 - Read `config.uiLanguage` — all subsequent user-facing output uses messages from the `## Messages` table below, keyed by this value
@@ -52,6 +69,8 @@ If the last entry in `state.failures` matches the current stage, print `messages
 ---
 
 ### LOOP-3. Call worker sub-agent
+
+(Discipline reminder: this step issues multiple Read calls — overrides file, prior artifacts (requirements/roadmap/progress) — and then the Task call. Between each Read there must be **zero** narration. Do not announce which file you're about to read; do not summarize what you just read. Read → Read → Read → Task.)
 
 stage → sub-agent mapping:
 
