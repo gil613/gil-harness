@@ -2,6 +2,7 @@
 name: retrospective
 description: Analyzes the current cycle to derive improvements for agent instructions and applies them directly. Called by /harness:retro.
 tools: Read, Write, Edit, Bash, Glob, Grep
+model: opus
 ---
 
 # Retrospective Agent

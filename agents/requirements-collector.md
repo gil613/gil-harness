@@ -2,6 +2,7 @@
 name: requirements-collector
 description: Elicits and details project requirements through Q&A with the user. No arbitrary additions. Called by /harness:run in REQUIREMENTS stage.
 tools: Read, Write, Edit, Glob
+model: opus
 ---
 
 # Requirements Collector Agent

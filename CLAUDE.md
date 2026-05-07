@@ -1,7 +1,6 @@
 # CLAUDE.md
 # 핵심 원칙
 - Agent = Model + Harness — 모델이 아닌 모든 것이 하네스
-- 이 파일은 **목차**다. 상세 원리는 `docs/research/harness-engineering.md` 참조
 - 백과사전 ❌, 목차 ✅ — 100줄 안에서 끝낸다
 - 실패에서 시작 — 에이전트가 실제로 실패한 경우에만 규칙을 추가한다
 - 에이전트가 막히면 모델 문제가 아니라 환경 결함 신호 — 누락된 도구/문서/가드레일을 식별·보강 후 재시도
@@ -9,25 +8,6 @@
 - Build to Delete — 어제 짠 smart logic을 뜯어낼 수 있게 모듈러로
 - The Harness is the Dataset — 경쟁 우위는 프롬프트가 아니라 하네스가 캡처하는 trajectory
 - "에이전트가 컨텍스트에서 접근 못 하는 것은 사실상 존재하지 않는 것"
-
-# 문서 구조 (System of Record)
-- `CLAUDE.md` — 목차 (이 파일, ~100줄)
-- `docs/agent-system-prompt/base.md` — 하네스 에이전트 공통 지침 (하네스 코드가 주입)
-- `docs/agent-system-prompt/roles/` — 역할별 추가 지침
-- `docs/research/` — 리서치 자료 (예: `harness-engineering.md`)
-- `docs/design-docs/` — 설계 문서 (`index.md` 진입점)
-- `docs/exec-plans/active/` · `completed/` — 실행 계획 + 의사결정 로그
-- `docs/exec-plans/tech-debt-tracker.md` — 기술 부채 추적
-- `docs/product-specs/` — 제품 스펙
-- `docs/references/` — 외부 참조 (LLM-friendly txt)
-- `docs/generated/` — 자동 생성 산출물 (db-schema 등)
-
-# 세션 간 메모리
-- **첫 세션(Initializer)** — 별도 prompt로 `init.sh` / progress / `feature-list.json` / 초기 commit만 생성, 기능 구현 ❌
-- `init.sh` — 개발 서버 실행 스크립트 (매 세션 시작 시 읽고 실행, 환경 파악 토큰 절약)
-- `claude-progress.txt` 또는 `STATE.md` — 세션 간 작업 로그
-- `feature-list.json` — 기능 목록, `passes` 필드만 수정 허용 (JSON: 모델 변조 저항)
-- 깨끗한(merge-ready) 상태로만 세션 종료
 
 # 컨텍스트 관리
 - `SKILL.md` — 반복 작업 절차 문서화, 필요 시점에만 컨텍스트 로드 (progressive disclosure)

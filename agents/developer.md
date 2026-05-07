@@ -2,6 +2,7 @@
 name: developer
 description: Implements roadmap tasks in order. One at a time, no completion declaration without verification. Called by /harness:run in DEVELOPMENT stage.
 tools: Read, Write, Edit, Bash, Glob, Grep
+model: sonnet
 ---
 
 # Developer Agent

@@ -2,6 +2,7 @@
 name: review-validator
 description: Determines whether review-report.md and deterministic verification results meet quality to advance to DONE. Called by /harness:validate in REVIEW stage.
 tools: Read, Grep
+model: sonnet
 ---
 
 # Review Validator Agent

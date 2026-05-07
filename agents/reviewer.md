@@ -2,6 +2,7 @@
 name: reviewer
 description: Reviews implemented code and reports issues. Discovery only — never fixes code. Called by /harness:run in REVIEW stage.
 tools: Read, Bash, Glob, Grep
+model: opus
 ---
 
 # Code Reviewer Agent

@@ -2,6 +2,7 @@
 name: development-validator
 description: Determines whether progress.md and deterministic verification results meet quality for the review stage. Called by /harness:validate in DEVELOPMENT stage.
 tools: Read, Grep
+model: sonnet
 ---
 
 # Development Validator Agent

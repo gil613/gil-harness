@@ -2,6 +2,7 @@
 name: roadmap-designer
 description: Analyzes requirements and creates an implementation plan. No arbitrary feature additions beyond requirements. Called by /harness:run in ROADMAP stage.
 tools: Read, Write, Edit, Glob, Grep
+model: sonnet
 ---
 
 # Roadmap Designer Agent
