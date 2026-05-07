@@ -1,6 +1,7 @@
 ---
 description: Run all stages automatically until DONE or retry limit
 allowed-tools: Read, Edit, Write, Bash, Glob, Grep, Task
+argument-hint: "[free-form intent for this cycle, e.g. 'T08 추가' or 'fix login bug']"
 ---
 
 # /harness:run
@@ -8,6 +9,10 @@ allowed-tools: Read, Edit, Write, Bash, Glob, Grep, Task
 **Auto-loop**: Runs stages sequentially until DONE is reached or the retry limit is exceeded. No manual intervention needed.
 
 Loop order: REQUIREMENTS → ROADMAP → DEVELOPMENT → REVIEW → DONE
+
+### User intent capture
+
+If the user passed any text after `/harness:run` (i.e. `$ARGUMENTS` is non-empty), capture it once at the very start of this command as `userIntent`. It is **not** a directive that overrides stage logic — it is a hint forwarded to the worker sub-agent (see LOOP-3) so requirements collection / development can focus on what the user actually asked for this cycle. Trim whitespace; if the result is empty, treat as no intent.
 
 ---
 
@@ -30,7 +35,10 @@ This procedure is a tight tool-driven loop. The session must NOT end between ite
 
 - Read `.harness/state.json` and `.harness/config.json`
 - Read `config.uiLanguage` — all subsequent user-facing output uses messages from the `## Messages` table below, keyed by this value
-- If `state.stage === 'DONE'`, print `messages.all_done` and stop the loop
+- If `state.stage === 'DONE'`:
+  - **The user just invoked `/harness:run` — that itself is the strongest signal that they want a new cycle. Do NOT bail with "all done" and force the user into a `reset --stage` dance.** Recover automatically:
+    - Look at `state.history`. If its last entry has `stage === "RETROSPECTIVE"`, retro already ran in this cycle; the only thing missing is the stage reset. Edit `.harness/state.json`: set `stage` to `"REQUIREMENTS"`, `iteration` to `0`, `failures` to `[]`, `lastValidated` to `null`. Print `messages.cycle_resumed`. Then **WITHOUT generating any further text, immediately re-read `.harness/state.json` as the very next action and continue this LOOP-1 with the refreshed state.**
+    - Otherwise (no retrospective entry — the cycle reached DONE without a retro, e.g. an interrupted prior run or a pre-0.3.0 state file): print `messages.auto_retro`, then **execute the retro.md procedure inline within this session** (skip the dirty-tree check — step 1 of retro.md). Retro's step 6 will reset `stage` to `REQUIREMENTS`. After retro completes, **WITHOUT generating any further text, immediately re-read `.harness/state.json` as the very next action and continue this LOOP-1 with the refreshed state.**
 - If `state.iteration >= state.maxRetries`, print `messages.retry_limit` and stop the loop
 
 ---
@@ -82,6 +90,14 @@ ROADMAP: requirements.md
 DEVELOPMENT: requirements.md, roadmap.md, progress.md (if present)
 REVIEW: requirements.md, roadmap.md, progress.md
 (inline each file's content inside ``` fences)
+
+[USER INTENT]   ← only when the captured `userIntent` from the top of this command is non-empty
+<userIntent verbatim>
+
+This is a free-form hint from the user about what they want this cycle to focus on
+(e.g. "add T08", "fix login bug"). Treat it as a focus signal — narrow your Q&A or
+implementation toward this. It does NOT override stage rules, completion criteria,
+or existing artifacts. If it contradicts the current stage's role, ignore it.
 
 [PREVIOUS FAILURE]   ← only when the last state.failures entry matches the current stage
 Cause: <cause>
@@ -156,6 +172,35 @@ Look up by `config.uiLanguage`. Substitute `{...}` placeholders before printing.
 
 - **en**: `All stages complete. /harness:retro recommended`
 - **ko**: `모든 단계 완료. /harness:retro 권장`
+
+(Retained for backward compatibility — LOOP-1 no longer prints this on `/harness:run`.
+The new behavior auto-recovers from a stuck DONE state. See `cycle_resumed` and `auto_retro` below.)
+
+### `cycle_resumed`
+
+- **en**:
+  ```
+  Previous cycle already retro'd but stage was stuck at DONE — resetting to REQUIREMENTS
+  and starting next cycle.
+  ```
+- **ko**:
+  ```
+  이전 사이클 회고는 끝났지만 stage가 DONE에 박혀 있었음 — REQUIREMENTS로 리셋하고
+  다음 사이클 시작합니다.
+  ```
+
+### `auto_retro`
+
+- **en**:
+  ```
+  Stage is DONE without a retrospective entry — running retro inline first
+  (it will reset stage to REQUIREMENTS), then continuing the loop.
+  ```
+- **ko**:
+  ```
+  Stage가 DONE인데 회고 기록이 없음 — 먼저 inline 회고를 실행합니다
+  (회고가 stage를 REQUIREMENTS로 리셋함), 이후 루프를 이어갑니다.
+  ```
 
 ### `retry_limit`
 

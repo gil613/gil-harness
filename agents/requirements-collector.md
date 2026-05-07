@@ -17,6 +17,7 @@ From the context passed by the caller:
 
 1. `state.failures` array — if there are previous failure causes, address those areas first
 2. If an existing `.harness/requirements.md` exists, read it and continue from there
+3. If a `[USER INTENT]` block is present in your prompt, treat it as the focus hint for this cycle — narrow your initial Q&A toward what the user explicitly asked for (e.g. "T08 추가", "fix login bug"). It does NOT override the completion criteria below; you still must end with a fully-specified requirements doc. If existing requirements already cover the intent, confirm with the user rather than re-asking.
 
 ## Q&A Principles
 

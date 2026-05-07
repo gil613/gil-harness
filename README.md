@@ -89,6 +89,10 @@ claude --plugin-dir ./gil-harness
 
 **한 번 실행하면 전 파이프라인을 자동으로 완주한다.** 내부 루프: 현재 스테이지 워커 실행 → validate → PASS면 다음 스테이지로 이동 후 반복 → DONE 도달 시 종료. FAIL이면 cause/plan을 워커에게 전달해 동일 스테이지 재시도. `iteration >= maxRetries`이면 루프 중단 후 사용자 개입 요청.
 
+`/harness:run T08 추가` 처럼 명령 뒤에 자유 문자열을 붙이면 이번 사이클의 `userIntent`로 캡처되어 워커 서브에이전트(특히 `requirements-collector`)에 focus hint로 전달된다. stage 규칙이나 완료 기준을 덮어쓰지는 않는다.
+
+이전 사이클이 `DONE` 상태로 끝나 있어도 `/harness:run`은 더 이상 거기서 멈추지 않는다 — 회고가 누락됐으면 inline 회고를 자동 실행하고, 회고가 끝나 있으면 stage만 `REQUIREMENTS`로 자동 리셋한 뒤 새 사이클을 이어간다. `reset --stage` 댄스 불필요.
+
 `.harness/agents-overrides/<subagent>.md`가 있으면 회고가 만든 프로젝트 로컬 지침을 프롬프트에 자동 인라인한다.
 
 ### `/harness:validate`

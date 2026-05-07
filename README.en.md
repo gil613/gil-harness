@@ -89,6 +89,10 @@ Stage artifacts (`requirements.md`, `roadmap.md`, `progress.md`, `review-report.
 
 **One invocation runs the entire pipeline automatically.** Internal loop: run current stage's worker → validate → on PASS advance to next stage and repeat → stop when DONE. On FAIL, passes cause/plan to the worker and retries the same stage. Stops and requests user intervention when `iteration >= maxRetries`.
 
+You can append free-form text after the command (e.g. `/harness:run add T08`); it is captured as this cycle's `userIntent` and forwarded to the worker sub-agent (especially `requirements-collector`) as a focus hint. It does NOT override stage rules or completion criteria.
+
+If the previous cycle is in `DONE`, `/harness:run` no longer bails — it auto-recovers: if a retrospective entry is missing it runs retro inline first, otherwise it just resets `stage` to `REQUIREMENTS` and continues with the next cycle. No more `reset --stage` dance.
+
 If `.harness/agents-overrides/<subagent>.md` exists, the retrospective-generated project-local instructions are automatically inlined into the prompt.
 
 ### `/harness:validate`
