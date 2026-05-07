@@ -113,7 +113,7 @@ Branch based on the validate result and updated state.
   - Print `messages.full_pipeline_done`
   - **Execute the retro.md procedure inline within this session** (skip the dirty-tree check — step 1 of retro.md)
   - Stop the loop after retro completes
-- Otherwise: print `messages.stage_advanced` populated with `<prev>` and `<new>`, then **immediately return to LOOP-1 — do NOT stop, do NOT return control to the user, do NOT wait for input**
+- Otherwise: print `messages.stage_advanced` populated with `<prev>` and `<new>`, then **WITHOUT generating any further text, immediately call `Read .harness/state.json` as the very next action to execute LOOP-1 — do NOT stop, do NOT return control to the user, do NOT wait for input**
 
 #### 5b. FAIL
 
@@ -124,7 +124,7 @@ Branch based on the validate result and updated state.
     - Print `messages.stage_regressed_retry` populated with `<fromStage>`, `<toStage>`, `<iteration>`, `<maxRetries>`, `<cause>`, `<plan>`
   - Else (same-stage retry):
     - Print `messages.stage_failed_retry` populated with `<stage>`, `<iteration>`, `<maxRetries>`, `<cause>`, `<plan>`
-  - **Return to LOOP-1 immediately — do not stop, do not ask the user for action**
+  - **WITHOUT generating any further text, immediately call `Read .harness/state.json` as the very next action to execute LOOP-1 — do NOT stop, do NOT ask the user for action**
 - If `state.iteration >= state.maxRetries`:
   - Print `messages.retry_limit_reached` populated with `<stage>`
   - Stop loop
