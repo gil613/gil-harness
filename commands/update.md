@@ -45,11 +45,13 @@ Use the Edit tool to insert only the missing fields.
 
 ### 3. Patch directories
 
-If directories required by the current version are missing, create them:
+If directories required by the current version are missing, create them using **quoted relative paths**:
 
 ```bash
-mkdir -p .harness/logs
+mkdir -p ".harness/logs"
 ```
+
+Always use double-quoted relative paths. Unquoted Windows absolute paths (e.g. `C:\dev\...`) cause bash to interpret backslashes as escape characters, creating a single malformed directory name instead of the intended path.
 
 Add to this list when new directories are introduced in future versions.
 

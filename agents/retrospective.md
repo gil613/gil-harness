@@ -49,7 +49,7 @@ Context passed by the caller:
 Determine the date based on **local time YYYY-MM-DD** (not UTC).
 If a file with the same date already exists, append `-2`, `-3`, ... suffix and create a new file.
 
-`.harness/retrospectives/<YYYY-MM-DD>.md`:
+`.harness/retrospectives/<YYYY-MM-DD>.md` (the Write tool creates parent directories automatically — no separate `mkdir` needed):
 
 ```markdown
 # Retrospective — YYYY-MM-DD
@@ -85,7 +85,7 @@ If analysis reveals an agent that needs improvement, **modify it directly with t
 
 Modification target priority:
 
-1. **`.harness/agents-overrides/<agent>.md`** — user project local override. If the directory is missing, create it with `mkdir -p .harness/agents-overrides` (relative path — never use Windows absolute paths like `C:\...` in Bash), then add.
+1. **`.harness/agents-overrides/<agent>.md`** — user project local override. If the directory is missing, create it with `mkdir -p ".harness/agents-overrides"` (quoted relative path — never use unquoted Windows absolute paths like `C:\...` in Bash; without quotes, backslashes are escape characters that corrupt the path), then add.
 2. Plugin's `agents/<agent>.md` — **only when the user has explicitly agreed**.
 
 ### Modification Rules

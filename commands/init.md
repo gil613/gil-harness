@@ -128,7 +128,13 @@ Empty strings are allowed (the corresponding check will be SKIPPED).
 
 - `.harness/logs/` — deterministic validation log storage (used by `/harness:validate` on first run)
 
-Use relative paths when calling `mkdir` (e.g., `mkdir -p .harness/logs`). Never use Windows absolute paths (`C:\...`) in Bash commands — backslashes are escape characters in bash and will corrupt the path into a single malformed directory name.
+Use **quoted relative paths** when calling `mkdir`:
+
+```bash
+mkdir -p ".harness/logs"
+```
+
+Never use unquoted paths or Windows absolute paths (`C:\...`) in Bash commands. Without quotes, backslashes are escape characters in bash and corrupt the path into a single malformed directory name (e.g. `C:\dev\workspace\project\.harness\logs` → `C:devworkspaceproject.harnesslogs`). Double-quoting is safe: even if an absolute path is used, MSYS2/Git Bash will convert it correctly.
 
 Do not create artifact files (`requirements.md`, `roadmap.md`, `progress.md`, `review-report.md`), `retrospectives/`, or `agents-overrides/` — each stage and retrospective creates them as needed. In re-init mode, never delete or truncate existing artifacts.
 
