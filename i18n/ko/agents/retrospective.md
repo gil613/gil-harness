@@ -90,7 +90,7 @@ tools: Read, Write, Edit, Bash, Glob, Grep
 
 수정 대상 우선순위:
 
-1. **`.harness/agents-overrides/<agent>.md`** — 사용자 프로젝트 로컬 오버라이드. 디렉터리가 없으면 `mkdir -p .harness/agents-overrides` 로 생성 후 추가 (상대경로 사용 — `C:\...` 같은 Windows 절대경로를 Bash에서 사용 금지).
+1. **`.harness/agents-overrides/<agent>.md`** — 사용자 프로젝트 로컬 오버라이드. 디렉터리가 없으면 `mkdir -p ".harness/agents-overrides"` (따옴표로 감싼 상대경로 — 따옴표 없이 `C:\...` 같은 Windows 절대경로를 Bash에서 쓰면 backslash가 이스케이프 처리되어 잘못된 이름의 디렉터리가 현재 폴더에 생성된다) 로 생성 후 추가.
 2. 플러그인 본체의 `agents/<agent>.md`는 **사용자가 명시적으로 동의했을 때만**.
 
 ### 수정 규칙

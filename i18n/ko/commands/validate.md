@@ -29,7 +29,7 @@ allowed-tools: Read, Edit, Bash, Task
 
 stage가 `DEVELOPMENT` 또는 `REVIEW`일 때만 실행. REQUIREMENTS/ROADMAP은 스킵.
 
-먼저 로그 디렉터리를 보장: `mkdir -p .harness/logs` (이미 있어도 무해).
+먼저 로그 디렉터리를 보장: `mkdir -p ".harness/logs"` (이미 있어도 무해). 항상 큰따옴표로 감싼다 — 따옴표 없는 Windows 절대경로는 bash가 backslash를 이스케이프로 처리해 잘못된 이름의 디렉터리를 현재 폴더에 만든다.
 
 `config.json`에서 다음 명령어를 순서대로 Bash로 실행:
 

@@ -135,7 +135,13 @@ allowed-tools: Bash, Read, Write, Edit, Glob
 
 - `.harness/logs/` — 결정론 검증 로그 보관소 (`/harness:validate`가 첫 실행 시 사용)
 
-`mkdir` 호출 시 반드시 상대경로 사용 (예: `mkdir -p .harness/logs`). Bash에서 `\`는 이스케이프 문자이므로 `C:\...` 같은 Windows 절대경로를 사용하면 경로 구분자가 모두 사라져 잘못된 이름의 디렉터리가 생성된다.
+`mkdir` 호출 시 반드시 **따옴표로 감싼 상대경로** 사용:
+
+```bash
+mkdir -p ".harness/logs"
+```
+
+따옴표 없이 사용하거나 Windows 절대경로(`C:\...`)를 사용하면 안 된다. Bash에서 `\`는 이스케이프 문자이므로, 따옴표 없는 `C:\dev\workspace\project\.harness\logs`는 `C:devworkspaceproject.harnesslogs`라는 이름의 단일 디렉터리로 깨진다. 따옴표로 감싸면 안전하다: 절대경로를 사용하더라도 MSYS2/Git Bash가 올바르게 변환한다.
 
 산출물 파일(`requirements.md`, `roadmap.md`, `progress.md`, `review-report.md`)과 `retrospectives/`, `agents-overrides/`는 만들지 않는다 — 각 스테이지/회고가 필요 시 직접 만든다. **재초기화 모드에서는 기존 산출물을 절대 삭제하거나 비우지 않는다.**
 

@@ -26,7 +26,7 @@ This procedure runs inside `/harness:run`'s tight tool-driven loop. The same **0
 
 Run only when stage is `DEVELOPMENT` or `REVIEW`. Skip for REQUIREMENTS/ROADMAP.
 
-Ensure the log directory exists first: `mkdir -p .harness/logs` (safe to run even if it already exists).
+Ensure the log directory exists first: `mkdir -p ".harness/logs"` (safe to run even if it already exists). Always double-quote the path — unquoted Windows absolute paths cause bash to strip backslashes, creating a malformed directory name in the CWD instead of the intended location.
 
 Run the following commands from `config.json` sequentially via Bash:
 
