@@ -51,14 +51,18 @@ Print each result to the console and accumulate in a results table:
 [PASS|FAIL|SKIP|ERROR] <label>: <command> (exit <code>, <ms>ms)
 ```
 
-**Preserve only the last 80 lines of stdout/stderr** — save the full log to `.harness/logs/<stage>-<YYYYMMDD-HHmmss>.log` and display only the tail in console/state.
+After each command completes, append one structured line to `.harness/logs/pipeline.log` using Bash. Capture the real wall-clock timestamp at the moment of the append — never use a placeholder string.
+
+`echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") | <stage> | <label> | <STATUS>[| exit <code>]" >> ".harness/logs/pipeline.log"`
+
+Append `| exit <code>` only on FAIL or ERROR. Do not write raw stdout/stderr to any file.
 
 #### Deterministic failure handling
 
 If any FAIL/ERROR/TIMEOUT occurs, do not proceed to inferential validation and fail immediately:
 
 - `cause` = `messages.deterministic_cause` populated with `<label>`, `<status>`, `<code>`
-- `plan` = `messages.deterministic_plan` populated with `<label>`, `<command>`, `<log path>`
+- `plan` = `messages.deterministic_plan` populated with `<label>`, `<command>`
 - If current stage is `REVIEW`, also set internal flag `regressTo = "DEVELOPMENT"` (broken code requires the developer agent, not another reviewer pass)
 - Proceed to the "failure handling" procedure (step 5 below)
 
@@ -137,6 +141,10 @@ From the text returned by the sub-agent:
 
 ### 5a. PASS handling
 
+Append the inferential result to `.harness/logs/pipeline.log` (use the actual validator sub-agent name from the table in step 3):
+
+`echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") | <stage> | <validator-name> | PASS" >> ".harness/logs/pipeline.log"`
+
 Update `state.json` (Edit):
 
 - `stage` → next stage (`STAGES[indexOf+1]`)
@@ -154,6 +162,10 @@ Omit `messages.next_hint` when called inline within the `/harness:run` loop — 
 ### 5b. FAIL handling
 
 Extract `REASON: <one line>` and `FIX_PLAN: <block>` from the sub-agent response. Also use the `regressTo` flag set in step 2 (deterministic) or step 4 (REGRESS_TO).
+
+Append the inferential result to `.harness/logs/pipeline.log` (validator name from step 3; REASON condensed to one line):
+
+`echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") | <stage> | <validator-name> | FAIL | <REASON>" >> ".harness/logs/pipeline.log"`
 
 Update `state.json` (Edit):
 
@@ -198,8 +210,8 @@ If `new iteration >= maxRetries`, additionally print `messages.retry_limit_reach
 
 ### `deterministic_plan`
 
-- **en**: `Resolve {label}({command}) failure first. Log: {logPath}`
-- **ko**: `먼저 {label}({command}) 실패를 해결하세요. 로그: {logPath}`
+- **en**: `Resolve {label}({command}) failure first. Details in .harness/logs/pipeline.log`
+- **ko**: `먼저 {label}({command}) 실패를 해결하세요. 상세: .harness/logs/pipeline.log`
 
 ### `parse_error`
 
