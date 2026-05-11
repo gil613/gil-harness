@@ -101,6 +101,24 @@ Modification target priority:
 
 After modifying each file, re-read it with Read to verify the intended change was applied.
 
+## Output 3: Overrides Compaction
+
+After all edits in Output 2 are complete, check every file that was touched (or created) under `.harness/agents-overrides/`.
+
+**Trigger**: file line count > 60.
+
+If triggered, perform a single compaction pass on the file using the Edit tool:
+
+1. **Deduplicate** — remove rules that say the same thing in different words; keep the more specific one.
+2. **Remove superseded rules** — if a newer rule in the same file explicitly covers a case, remove the older narrower rule.
+3. **Remove redundant rules** — if a rule is already present verbatim (or semantically equivalent) in the base agent file (`agents/<agent>.md` or `docs/agent-system-prompt/en/base.md`), drop it from the override.
+4. **Merge similar rules** — combine rules that share the same constraint into one concise line.
+5. **Target**: bring the file under 40 lines without losing distinct constraints.
+
+After compaction, re-read the file to confirm the result is under 40 lines. If not, do another pass.
+
+Report compacted files in the Final Report block.
+
 ## Final Report
 
 Return the following as a single block to the caller:
