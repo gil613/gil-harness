@@ -72,7 +72,7 @@ If the last entry in `state.failures` matches the current stage, print `messages
 
 ### LOOP-3. Call worker sub-agent
 
-(Discipline reminder: this step issues multiple Read calls — overrides file, prior artifacts (requirements/roadmap/progress) — and then the Task call. Between each Read there must be **zero** narration. Do not announce which file you're about to read; do not summarize what you just read. Read → Read → Read → Task.)
+(Discipline reminder: this step issues multiple Read calls — base instructions, overrides file, prior artifacts (requirements/roadmap/progress) — then a Bash call to log the worker start, then the Task call. Between each step there must be **zero** narration. Read → Read → Read → Read → Bash → Task.)
 
 stage → sub-agent mapping:
 
@@ -83,9 +83,19 @@ stage → sub-agent mapping:
 | DEVELOPMENT | developer |
 | REVIEW | reviewer |
 
+#### Load base instructions
+
+Read `docs/agent-system-prompt/en/base.md`. This content is injected into every worker sub-agent as `[BASE INSTRUCTIONS]`.
+
 #### Load overrides
 
 If `.harness/agents-overrides/<subagent_type>.md` exists, read it. Otherwise use an empty string.
+
+#### Log worker start
+
+Ensure the log directory exists and append a STARTED line to `.harness/logs/pipeline.log`. Capture the real wall-clock timestamp:
+
+`mkdir -p ".harness/logs" && echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") | <stage> | <worker-name> | STARTED" >> ".harness/logs/pipeline.log"`
 
 #### Task prompt template
 
@@ -105,6 +115,9 @@ All free-form text in your artifact bodies, your one-line caller report, and any
 narrative MUST be in this language. Protocol identifiers (section headers like "## Done",
 result labels like "VALIDATION_RESULT:", task IDs like "T01", AC IDs like "AC1") MUST stay
 verbatim in English. See your agent's "Output Language" section for the exact list.
+
+[BASE INSTRUCTIONS]
+<docs/agent-system-prompt/base.md contents verbatim>
 
 [PREVIOUS ARTIFACTS]
 ROADMAP: requirements.md

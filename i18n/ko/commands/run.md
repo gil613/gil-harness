@@ -65,6 +65,10 @@ stage → 서브에이전트 매핑:
 
 `config.uiLanguage`가 없거나 `"ko"`이면 한국어 에이전트 사용.
 
+#### 기본 지침 로드
+
+`docs/agent-system-prompt/base.md`를 Read로 읽어둔다. 이 내용은 모든 서브에이전트에 `[기본 지침]` 블록으로 주입된다.
+
 #### 오버라이드 로드
 
 `.harness/agents-overrides/<subagent_type>.md` 파일이 존재하면 Read로 읽어둔다. 없으면 빈 문자열.
@@ -79,6 +83,9 @@ stage → 서브에이전트 매핑:
 
 [CONFIG]
 <.harness/config.json 전체>
+
+[기본 지침]
+<docs/agent-system-prompt/base.md 내용 그대로>
 
 [이전 산출물]
 ROADMAP: requirements.md

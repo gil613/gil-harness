@@ -11,6 +11,7 @@
 
 # 컨텍스트 관리
 - `SKILL.md` — 반복 작업 절차 문서화, 필요 시점에만 컨텍스트 로드 (progressive disclosure)
+- `검증 → 커밋 → 소거` = 원자적 체크포인트 — 셋 중 하나라도 빠지면 소거 금지
 - 에이전트 런타임 컨텍스트 관리 원칙 → `docs/agent-system-prompt/base.md`
 
 # 세션 워크플로우 (Coding Agent)
