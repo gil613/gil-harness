@@ -14,6 +14,8 @@ Judges whether the current stage artifacts meet the quality bar to advance to th
 
 This procedure runs inside `/harness:run`'s tight tool-driven loop. The same **0-character output budget between tool calls** rule applies: the only user-visible text is the literal `messages.*` strings the procedure mandates and the deterministic results table. No greetings, no plan announcements, no summaries of intermediate Reads, no "I will now run typecheck…" narration. Read → Bash → Bash → Task → Edit, with mandated message prints inserted only where the procedure says so.
 
+**Language**: All `messages.*` output MUST use the `config.uiLanguage` variant — if `uiLanguage === 'ko'`, print Korean text. Defaulting to English for a Korean-language project is a protocol violation.
+
 ## Procedure
 
 ### 1. Load state
@@ -182,7 +184,7 @@ If `new iteration >= maxRetries`, additionally print `messages.retry_limit_reach
 
 ## Messages
 
-Look up by `config.uiLanguage`. Substitute `{...}` placeholders before printing.
+**CRITICAL — Language selection**: Select the variant matching `config.uiLanguage` exactly. If `uiLanguage === 'ko'`, use `ko:` text — never `en:`. Substitute `{...}` placeholders before printing.
 
 ### `already_done`
 

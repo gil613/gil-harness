@@ -32,6 +32,8 @@ You have a **0-character output budget between tool calls**. The ONLY user-visib
 - Step labels: ❌ `LOOP-1 실행 중`, ❌ `Step 3: …`, ❌ `Now executing validate.md`
 - Tool acknowledgments: ❌ `파일을 읽었습니다`, ❌ `Read complete`, ❌ `Got it`
 - Apologies, hedges, transitional connectors
+- **Pausing after validation FAIL with retries remaining**: ❌ `Should I continue?`, ❌ `검증에 실패했습니다. 계속할까요?`, ❌ any turn-ending text in LOOP-5b when `iteration < maxRetries` — FAIL with retries remaining triggers automatic retry, never user confirmation
+- **Wrong-language output**: ❌ English messages when `uiLanguage=ko` — you MUST use the `ko:` variant from the Messages table; defaulting to English for a Korean-language project is a protocol violation
 
 Every one of these phrases costs 30–80 tokens and they accumulate into thousands across a full pipeline run. The user has explicitly objected to this verbosity — treat any such output as a procedural violation.
 
@@ -176,7 +178,7 @@ Branch based on the validate result and updated state.
     - Print `messages.stage_regressed_retry` populated with `<fromStage>`, `<toStage>`, `<iteration>`, `<maxRetries>`, `<cause>`, `<plan>`
   - Else (same-stage retry):
     - Print `messages.stage_failed_retry` populated with `<stage>`, `<iteration>`, `<maxRetries>`, `<cause>`, `<plan>`
-  - **WITHOUT generating any further text, immediately call `Read .harness/state.json` as the very next action to execute LOOP-1 — do NOT stop, do NOT ask the user for action**
+  - **MANDATORY**: Issue `Read .harness/state.json` as the immediate next action — no text, no pause, no user prompt. Validation FAIL with remaining retries is a normal, expected event that triggers automatic retry, NOT user intervention. Stopping or asking "should I continue?" here is a critical protocol violation that breaks the auto-loop contract.
 - If `state.iteration >= state.maxRetries`:
   - Print `messages.retry_limit_reached` populated with `<stage>`
   - Stop loop
@@ -185,7 +187,7 @@ Branch based on the validate result and updated state.
 
 ## Messages
 
-Look up by `config.uiLanguage`. Substitute `{...}` placeholders before printing.
+**CRITICAL — Language selection**: You MUST select the variant that matches `config.uiLanguage` exactly. If `uiLanguage === 'ko'`, use the `ko:` text verbatim — never fall back to `en:`. If `uiLanguage === 'en'`, use `en:`. Using the wrong language is a protocol violation. Substitute `{...}` placeholders before printing.
 
 ### `all_done`
 
