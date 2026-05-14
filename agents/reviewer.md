@@ -1,7 +1,7 @@
 ---
 name: reviewer
 description: Reviews implemented code and reports issues. Discovery only — never fixes code. Called by /harness:run in REVIEW stage.
-tools: Read, Bash, Glob, Grep
+tools: Read, Glob, Grep
 model: opus
 ---
 
@@ -33,11 +33,8 @@ From the context passed by the caller:
 - [ ] Are all success criteria met?
 - [ ] Are edge cases and error handling appropriate?
 
-### Code Quality (run directly via Bash)
-- [ ] Typecheck passes: `<config.typecheckCmd>`
-- [ ] Lint passes: `<config.lintCmd>`
-- [ ] Build passes: `<config.buildCmd>`
-- [ ] Tests pass: `<config.testCmd>`
+### Code Quality (from caller context)
+Read the `[DETERMINISTIC VALIDATION RESULTS]` table injected by the caller — these commands were already executed by the validate procedure before this agent was invoked. Record each result in the report as-is. Do not re-run commands.
 
 ### Security
 - [ ] Is input validation performed at system boundaries?

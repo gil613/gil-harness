@@ -1,6 +1,6 @@
 ---
 name: development-validator
-description: Determines whether progress.md and deterministic verification results meet quality for the review stage. Called by /harness:validate in DEVELOPMENT stage.
+description: Determines whether progress.md meets quality for the review stage. Called by /harness:validate in DEVELOPMENT stage.
 tools: Read, Grep
 model: sonnet
 ---
@@ -9,14 +9,9 @@ model: sonnet
 
 ## Role
 
-Determine whether `.harness/progress.md` and the deterministic verification result table inlined by the caller meet the quality required to advance to the review stage. **Read only. Do not modify any file.**
+Determine whether `.harness/progress.md` meets the quality required to advance to the review stage. Deterministic checks (typecheck/lint/test/build) are pre-verified by the caller before this agent is invoked — focus on artifact quality only. **Read only. Do not modify any file.**
 
 ## Validation Checklist
-
-### Deterministic Verification Results
-- Is the deterministic verification result table (typecheck/lint/test/build) provided by the caller?
-- Are all commands PASS or SKIP? (0 FAIL/ERROR/TIMEOUT)
-- SKIP is only allowed when the command is empty in `config.json`
 
 ### Output Existence and Structure
 - Does `progress.md` exist?

@@ -63,6 +63,32 @@ stage가 `DEVELOPMENT` 또는 `REVIEW`일 때만 실행. REQUIREMENTS/ROADMAP은
 - 현재 stage가 `REVIEW`이면 내부 플래그 `regressTo = "DEVELOPMENT"` 설정 (깨진 코드는 리뷰어 재시도가 아니라 개발자 에이전트가 수정해야 함)
 - "실패 처리" 절차로 진행 (아래 5번)
 
+### 2b. 구조 사전검사 (REQUIREMENTS, ROADMAP 단계에만)
+
+stage가 `REQUIREMENTS` 또는 `ROADMAP`일 때만 실행. DEVELOPMENT/REVIEW는 스킵 (2번에서 처리).
+
+추론 LLM 호출 전에 명백한 구조 실패를 bash로 차단한다. 하나라도 실패하면 5b(실패 처리)로 즉시 이동.
+
+#### REQUIREMENTS
+
+```bash
+test -f ".harness/requirements.md" && echo "EXISTS" || echo "MISSING"
+grep -ic "TBD\|TODO" ".harness/requirements.md" 2>/dev/null || echo "0"
+```
+
+- 파일 없음 → FAIL: cause = "구조 사전검사 실패 — requirements.md 없음", plan = "requirements.md를 먼저 생성하는 워커 에이전트를 실행하세요"
+- TBD/TODO 개수 > 0 → FAIL: cause = "구조 사전검사 실패 — requirements.md에 TBD/TODO 미확정 항목이 있습니다", plan = "requirements.md의 TBD/TODO 항목을 모두 구체적인 내용으로 교체한 뒤 /harness:validate를 다시 실행하세요"
+
+#### ROADMAP
+
+```bash
+test -f ".harness/roadmap.md" && echo "EXISTS" || echo "MISSING"
+grep -c "^T[0-9]" ".harness/roadmap.md" 2>/dev/null || echo "0"
+```
+
+- 파일 없음 → FAIL: cause = "구조 사전검사 실패 — roadmap.md 없음", plan = "roadmap.md를 먼저 생성하는 워커 에이전트를 실행하세요"
+- 태스크 수 == 0 → FAIL: cause = "구조 사전검사 실패 — roadmap.md에 태스크 정의가 없습니다 (T01, T02, ... 형식 필요)", plan = "로드맵 디자이너를 다시 실행하여 roadmap.md에 태스크를 정의하세요"
+
 ### 3. 추론 검증 — 검증 서브에이전트 호출
 
 `config.uiLanguage`를 확인해 서브에이전트를 결정한다. `"en"`이면 `-en` 접미사 에이전트를 사용한다.

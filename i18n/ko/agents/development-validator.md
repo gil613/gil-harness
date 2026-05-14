@@ -14,14 +14,9 @@ tools: Read, Grep
 
 ## 역할
 
-`.harness/progress.md`와 호출자가 인라인으로 첨부한 결정론 검증 결과 표가 리뷰 단계로 넘어갈 수 있는 품질인지 판정한다. **읽기만 한다. 어떤 파일도 수정하지 않는다.**
+`.harness/progress.md`가 리뷰 단계로 넘어갈 수 있는 품질인지 판정한다. 결정론 검증(typecheck/lint/test/build)은 이 에이전트가 호출되기 전 호출자가 사전 검증했으므로, 산출물 품질에만 집중한다. **읽기만 한다. 어떤 파일도 수정하지 않는다.**
 
 ## 검증 항목
-
-### 결정론 검증 결과
-- 호출자가 첨부한 결정론 검증 결과 표가 있는가 (typecheck/lint/test/build)
-- 모든 명령이 PASS 또는 SKIP 인가 (FAIL/ERROR/TIMEOUT 0건)
-- SKIP은 `config.json`에서 명령어가 비어있을 때만 허용
 
 ### 산출물 존재 및 구조
 - `progress.md`가 존재하는가

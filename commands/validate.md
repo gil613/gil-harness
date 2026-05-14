@@ -66,6 +66,32 @@ If any FAIL/ERROR/TIMEOUT occurs, do not proceed to inferential validation and f
 - If current stage is `REVIEW`, also set internal flag `regressTo = "DEVELOPMENT"` (broken code requires the developer agent, not another reviewer pass)
 - Proceed to the "failure handling" procedure (step 5 below)
 
+### 2b. Structural pre-checks (REQUIREMENTS and ROADMAP stages only)
+
+Run only when stage is `REQUIREMENTS` or `ROADMAP`. Skip for DEVELOPMENT/REVIEW (step 2 covers those).
+
+These bash checks catch obvious structural failures before the inferential LLM call. If any fail, skip directly to step 5b (failure handling).
+
+#### REQUIREMENTS
+
+```bash
+test -f ".harness/requirements.md" && echo "EXISTS" || echo "MISSING"
+grep -ic "TBD\|TODO" ".harness/requirements.md" 2>/dev/null || echo "0"
+```
+
+- File missing → FAIL: `cause` = `messages.structural_missing` with `{file}=requirements.md`, `plan` = `messages.structural_missing_plan` with `{file}=requirements.md`
+- TBD/TODO count > 0 → FAIL: `cause` = `messages.structural_tbd`, `plan` = `messages.structural_tbd_plan`
+
+#### ROADMAP
+
+```bash
+test -f ".harness/roadmap.md" && echo "EXISTS" || echo "MISSING"
+grep -c "^T[0-9]" ".harness/roadmap.md" 2>/dev/null || echo "0"
+```
+
+- File missing → FAIL: `cause` = `messages.structural_missing` with `{file}=roadmap.md`, `plan` = `messages.structural_missing_plan` with `{file}=roadmap.md`
+- Task count == 0 → FAIL: `cause` = `messages.structural_no_tasks`, `plan` = `messages.structural_no_tasks_plan`
+
 ### 3. Inferential validation — call validation sub-agent
 
 stage → sub-agent:
@@ -265,6 +291,36 @@ If `new iteration >= maxRetries`, additionally print `messages.retry_limit_reach
 
   남은 재시도: {remaining}
   ```
+
+### `structural_missing`
+
+- **en**: `Structural check failed — {file} does not exist`
+- **ko**: `구조 사전검사 실패 — {file} 없음`
+
+### `structural_missing_plan`
+
+- **en**: `Run the appropriate worker agent to generate {file} first`
+- **ko**: `{file}을(를) 먼저 생성하는 워커 에이전트를 실행하세요`
+
+### `structural_tbd`
+
+- **en**: `Structural check failed — requirements.md contains unresolved TBD/TODO placeholders`
+- **ko**: `구조 사전검사 실패 — requirements.md에 TBD/TODO 미확정 항목이 있습니다`
+
+### `structural_tbd_plan`
+
+- **en**: `Replace all TBD/TODO entries in requirements.md with concrete answers, then re-run /harness:validate`
+- **ko**: `requirements.md의 TBD/TODO 항목을 모두 구체적인 내용으로 교체한 뒤 /harness:validate를 다시 실행하세요`
+
+### `structural_no_tasks`
+
+- **en**: `Structural check failed — roadmap.md contains no task definitions (expected T01, T02, ...)`
+- **ko**: `구조 사전검사 실패 — roadmap.md에 태스크 정의가 없습니다 (T01, T02, ... 형식 필요)`
+
+### `structural_no_tasks_plan`
+
+- **en**: `Re-run the roadmap designer to generate task definitions in roadmap.md`
+- **ko**: `로드맵 디자이너를 다시 실행하여 roadmap.md에 태스크를 정의하세요`
 
 ### `retry_limit_reached`
 

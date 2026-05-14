@@ -7,7 +7,7 @@
 ---
 name: reviewer
 description: 구현된 코드를 검토하고 문제를 보고한다. 발견 전용 — 코드를 직접 수정하지 않는다. /harness:run 이 REVIEW 단계에서 호출.
-tools: Read, Bash, Glob, Grep
+tools: Read, Glob, Grep
 ---
 
 # 코드 리뷰 에이전트
@@ -38,11 +38,8 @@ tools: Read, Bash, Glob, Grep
 - [ ] 성공 기준을 모두 만족하는가
 - [ ] 엣지 케이스와 예외 처리가 적절한가
 
-### 코드 품질 (Bash로 직접 실행)
-- [ ] 타입체크 통과: `<config.typecheckCmd>`
-- [ ] 린트 통과: `<config.lintCmd>`
-- [ ] 빌드 통과: `<config.buildCmd>`
-- [ ] 테스트 통과: `<config.testCmd>`
+### 코드 품질 (호출자 컨텍스트에서 읽기)
+호출자가 주입한 `[DETERMINISTIC VALIDATION RESULTS]` 표를 읽는다 — 이 명령어들은 이 에이전트가 호출되기 전 validate 절차에서 이미 실행됐다. 각 결과를 그대로 보고서에 기록하고, 명령어를 재실행하지 않는다.
 
 ### 보안
 - [ ] 입력 검증이 시스템 경계에서 이루어지는가
