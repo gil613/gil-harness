@@ -8,6 +8,8 @@
   "repository": "https://github.com/gil613/gil-harness",
   "commands": ["./commands/"],
   "agents": [
+    "./agents/analyzer.md",
+    "./agents/analysis-validator.md",
     "./agents/developer.md",
     "./agents/development-validator.md",
     "./agents/requirements-collector.md",
@@ -16,6 +18,8 @@
     "./agents/review-validator.md",
     "./agents/reviewer.md",
     "./agents/roadmap-designer.md",
-    "./agents/roadmap-validator.md"
+    "./agents/roadmap-validator.md",
+    "./agents/spec-validator.md",
+    "./agents/specifier.md"
   ]
 }

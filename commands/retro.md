@@ -21,15 +21,25 @@ Check for dirty state via `git status --porcelain`. If dirty, warn the user with
 
 Read `.harness/config.json` to obtain `uiLanguage` (used for all subsequent user-facing output via the `## Messages` table below).
 
-Read the following files (only those that exist):
+Read the following files (only those that exist — silently skip missing):
 
+Implementation cycle:
 - `.harness/state.json` — full failures/history
 - `.harness/config.json`
 - `.harness/requirements.md`
 - `.harness/roadmap.md`
 - `.harness/progress.md`
 - `.harness/review-report.md`
+
+Analysis cycle:
+- `.harness/analyzer-state.json` — analysis-cycle failures/history
+- `.harness/analysis.md`
+- `.harness/spec.md`
+
+Shared:
 - Glob `.harness/retrospectives/*.md` — past retrospectives (latest 5)
+
+If neither `state.json` nor `analyzer-state.json` exists, abort with a one-line message: there is nothing to retrospect on.
 
 ### 3. Call retrospective sub-agent
 
@@ -44,15 +54,23 @@ agent instruction files MUST be written in English (the canonical language of th
 files). See your agent's "Output Language" section.
 ```
 
-Then list the analysis directives:
+Then list the analysis directives. **Apply only the directives whose corresponding state file is present** — skip the rest:
 
+Implementation-cycle directives (require `state.json`):
 - Analyze failure patterns (distribution of causes in state.failures)
 - Requirements collection quality (number of requirement changes during development)
 - Roadmap accuracy (estimated vs actual complexity)
 - Development efficiency (repeated mistakes)
 - Review effectiveness (frequency of missed Critical issues)
-- Produce two artifacts:
-  1. **Retrospective report** (what went well / needs improvement / lessons learned) — save to `.harness/retrospectives/<YYYY-MM-DD>.md` (date based on **local time**)
+
+Analysis-cycle directives (require `analyzer-state.json`):
+- Analyzer failures: unsourced Findings, vague Methodology, contaminated Open Questions
+- Specifier regressions: how often `REGRESS_TO: ANALYSIS` fired and whether the same area regressed repeatedly
+- Decision sourcing: did `spec.md` Decisions reference `analysis.md F#` or rely on user interview alone?
+- Interview efficiency: were interview questions answerable from `analysis.md` already?
+
+Produce two artifacts:
+  1. **Retrospective report** (Cycles Covered / What Went Well / Needs Improvement / Lessons Learned) — save to `.harness/retrospectives/<YYYY-MM-DD>.md` (date based on **local time**)
   2. **Agent instruction improvements** — apply directly via Edit tool to `.harness/agents-overrides/<agent>.md` or plugin location
 
 ### 4. Patch application policy

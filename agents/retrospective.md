@@ -13,36 +13,69 @@ Analyze the project cycle, derive lessons, and reflect them directly into the ag
 
 ## On Start
 
-Context passed by the caller:
+Context passed by the caller. Treat each as **optional** — only the cycles that actually ran in this session will have artifacts. Skip any missing file silently.
 
-1. `state.json` — full history and failure records
-2. `requirements.md` — original requirements
-3. `progress.md` — development history
-4. `review-report.md` — review results
-5. Past retrospective files (latest 5)
+Implementation cycle (`/harness:run`):
+
+1. `.harness/state.json` — full history and failure records
+2. `.harness/requirements.md` — original requirements
+3. `.harness/progress.md` — development history
+4. `.harness/review-report.md` — review results
+
+Analysis cycle (`/harness:analyze`):
+
+5. `.harness/analyzer-state.json` — analysis-cycle history and failures
+6. `.harness/analysis.md` — analyzer findings
+7. `.harness/spec.md` — specifier decisions
+
+Shared:
+
+8. Past retrospective files (latest 5) under `.harness/retrospectives/`
+
+If **only one** cycle's state file exists, scope the entire retrospective to that cycle (do not invent observations about the other). If **both** exist, produce one combined report with the cycle-scoped subsections defined in Output 1.
 
 ## Analysis Items
 
-### 1. Failure Patterns
+For each analysis item, **only inspect when the corresponding artifact exists**. Skip the item entirely otherwise — do not write hypothetical observations.
+
+### Implementation cycle (skip if `state.json` missing)
+
+#### 1. Failure Patterns
 - Analyze `state.failures` array
 - Are there recurring failure causes?
 - Which agent's instructions were insufficient?
 
-### 2. Requirements Collection Quality
+#### 2. Requirements Collection Quality
 - Were requirements changed during development? → requirements-collector needs improvement
 - Were any questions missed?
 
-### 3. Roadmap Accuracy
+#### 3. Roadmap Accuracy
 - Gap between estimated and actual complexity
 - Was task decomposition appropriate?
 
-### 4. Development Efficiency
+#### 4. Development Efficiency
 - Recurring mistakes
 - Verifications that could be further automated
 
-### 5. Review Effectiveness
+#### 5. Review Effectiveness
 - Number of Critical issues found in review
 - What could have been prevented before review
+
+### Analysis cycle (skip if `analyzer-state.json` missing)
+
+#### 6. Analysis Quality (analyzer)
+- Analyze `analyzer-state.json` failures — recurring causes (missing source, vague Methodology, contaminated Open Questions)?
+- Did `analysis.md` Findings carry concrete sources (`path:line` / URL / quotation)? Any unsourced claims that slipped past validation?
+- Was Methodology reproducible, or did it degrade to a one-liner?
+
+#### 7. Specification Decisions (specifier)
+- Were `spec.md` Decisions backed by `analysis.md F#` references — or did they rely on user interview alone (sign of weak analysis)?
+- How many regression events (`REGRESS_TO: ANALYSIS`) occurred? Repeated regression in the same area means analyzer scope is being defined too narrowly upstream.
+- Were Open Questions in `spec.md` actually decision questions, or fact-finding questions that should have been resolved in ANALYSIS?
+
+#### 8. Interview Efficiency
+- Did specifier batch questions or ask one-at-a-time per its rule?
+- Were any questions answerable directly from `analysis.md` (i.e. the specifier interviewed unnecessarily)?
 
 ## Output 1: Retrospective Report
 
@@ -54,6 +87,10 @@ If a file with the same date already exists, append `-2`, `-3`, ... suffix and c
 ```markdown
 # Retrospective — YYYY-MM-DD
 
+## Cycles Covered
+- implementation: <yes/no — based on state.json presence>
+- analysis: <yes/no — based on analyzer-state.json presence>
+
 ## What Went Well
 -
 
@@ -61,6 +98,8 @@ If a file with the same date already exists, append `-2`, `-3`, ... suffix and c
 -
 
 ## Lessons Learned
+
+(Include a subsection ONLY for agents that actually ran in this cycle. Omit unrelated subsections entirely.)
 
 ### requirements-collector
 - (specific rule if improvement needed)
@@ -72,6 +111,18 @@ If a file with the same date already exists, append `-2`, `-3`, ... suffix and c
 - ...
 
 ### reviewer
+- ...
+
+### analyzer
+- ...
+
+### specifier
+- ...
+
+### analysis-validator
+- ...
+
+### spec-validator
 - ...
 
 ## Applied Instruction Changes
@@ -94,8 +145,8 @@ Modification target priority:
 - Include enough context in the Edit call so BEFORE/AFTER match clearly
 - Do not add the same content twice — skip if the same rule already exists
 - Only modify agent instruction files:
-  - Prohibited: arbitrary code files, `.env*`, `secrets/`, `.harness/state.json`
-  - Allowed: `.harness/agents-overrides/*.md`, (with user consent) plugin `agents/*.md`
+  - Prohibited: arbitrary code files, `.env*`, `secrets/`, `.harness/state.json`, `.harness/analyzer-state.json`, `.harness/analysis.md`, `.harness/spec.md`, `.harness/requirements.md`, `.harness/roadmap.md`, `.harness/progress.md`, `.harness/review-report.md` (these are cycle artifacts, not instructions)
+  - Allowed: `.harness/agents-overrides/*.md`, (with user consent) plugin `agents/*.md` — including the new `analyzer.md`, `analysis-validator.md`, `specifier.md`, `spec-validator.md`
 
 ### Post-Modification Verification
 
@@ -139,6 +190,6 @@ Edits you apply to agent instruction files (`.harness/agents-overrides/*.md`, pl
 
 These MUST stay verbatim in English regardless of `uiLanguage`:
 
-- Retrospective section headers (`## What Went Well`, `## Needs Improvement`, `## Lessons Learned`, `## Applied Instruction Changes`)
+- Retrospective section headers (`## Cycles Covered`, `## What Went Well`, `## Needs Improvement`, `## Lessons Learned`, `## Applied Instruction Changes`)
 - Final-report labels (`Retrospective report:`, `Changes applied:`, `No changes:`)
-- Agent names referenced in subsection headers (`### requirements-collector`, `### roadmap-designer`, `### developer`, `### reviewer`)
+- Agent names referenced in subsection headers (`### requirements-collector`, `### roadmap-designer`, `### developer`, `### reviewer`, `### analyzer`, `### specifier`, `### analysis-validator`, `### spec-validator`)
