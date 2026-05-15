@@ -14,13 +14,25 @@ Everything that is not the model — agent instructions, validation criteria, st
 
 ### Workflow
 
+**Implementation cycle** (`/harness:run`):
+
 ```
 REQUIREMENTS → ROADMAP → DEVELOPMENT → REVIEW → DONE
       ↑              ↑           ↑            ↑
  [validation]  [validation] [validation] [validation]
 ```
 
-Each stage has a dedicated worker sub-agent that does the work and a validator sub-agent that reviews the output. On validation failure, the cause and fix plan are recorded in `state.json` and the stage is retried. After `maxRetries` (default 3), user intervention is requested.
+**Analysis cycle** (`/harness:analyze`):
+
+```
+ANALYSIS → SPECIFICATION → DONE
+    ↑              ↑
+[validation]  [validation]
+```
+
+The two cycles use separate state files (`state.json` / `analyzer-state.json`) and can run independently without conflict.
+
+Each stage has a dedicated worker sub-agent that does the work and a validator sub-agent that reviews the output. On validation failure, the cause and fix plan are recorded in the state file and the stage is retried. After `maxRetries` (default 3), user intervention is requested.
 
 ---
 
@@ -48,7 +60,8 @@ claude --plugin-dir ./gil-harness
 
 ```
 /harness:init        # Initialize .harness/ in the current project
-/harness:run         # Run the full pipeline automatically
+/harness:run         # Run the implementation pipeline automatically (REQUIREMENTS→REVIEW→DONE)
+/harness:analyze     # Run the analysis pipeline automatically (ANALYSIS→SPECIFICATION→DONE)
 /harness:status      # Check progress
 /harness:retro       # Retrospective + instruction improvement after all stages complete
 ```
@@ -60,7 +73,8 @@ claude --plugin-dir ./gil-harness
 | Command | Role |
 |---------|------|
 | `/harness:init` | Auto-analyzes the current project → generates `.harness/config.json`, `.harness/state.json` |
-| `/harness:run` | **Full-pipeline auto-loop** — repeats run→validate until DONE or retry limit, no manual input needed |
+| `/harness:run` | **Implementation cycle auto-loop** — repeats run→validate until DONE or retry limit, no manual input needed |
+| `/harness:analyze` | **Analysis cycle auto-loop** — ANALYSIS→SPECIFICATION→DONE, runs independently of the implementation cycle |
 | `/harness:validate` | Deterministic checks (typecheck/lint/test/build via Bash) + inferential validation (sub-agent) |
 | `/harness:status` | Single-screen progress summary |
 | `/harness:advance` | Force-advance to the next stage skipping validation (emergency use, requires confirmation) |
@@ -140,6 +154,23 @@ Force-advances to the next stage without validation. Records `skippedValidation:
 
 `maxRetries`, `lastValidated`, `history`, and `schemaVersion` are never touched.
 
+### `/harness:analyze`
+
+**One invocation runs the entire analysis pipeline automatically.** Internal loop: ANALYSIS worker → validate → on PASS advance to SPECIFICATION → validate → on PASS reach DONE. On FAIL, passes cause/plan to the worker and retries. Stops and requests user intervention when `iteration >= maxRetries`.
+
+Append the analysis subject as free-form text; it is forwarded to the worker as `[USER INTENT]`. If omitted, the `analyzer` asks the user once.
+
+```bash
+/harness:analyze impact of auth module on regression tests
+/harness:analyze technical feasibility review of PRD draft
+```
+
+If the previous cycle is in DONE, it automatically resets to ANALYSIS and starts a fresh cycle. Does not conflict with the implementation cycle (`state.json`).
+
+Outputs:
+- `.harness/analysis.md` — evidence-based analysis (sourced Findings, Methodology, Open Questions)
+- `.harness/spec.md` — decision specification (Decisions + rationale, Recommendations, Constraints)
+
 ### `/harness:retro`
 
 Calls the `retrospective` sub-agent to analyze the current cycle. Produces two outputs:
@@ -196,6 +227,19 @@ To update the plugin to a newer version: `claude plugin update harness`
 - Any Critical issue causes FAIL
 - Output: `.harness/review-report.md`
 
+### ANALYSIS — Evidence-based Analysis (`analyzer`)
+
+- Every Finding must have a source attached: `file:line`, URL, or user-statement quote
+- No TBD or speculation — unknowns go in `Open Questions`
+- Output: `.harness/analysis.md`
+
+### SPECIFICATION — Decision Specification (`specifier`)
+
+- Derives decisions from `analysis.md` findings
+- Each Decision must include a rationale (`analysis.md F#` reference or user-interview quote)
+- Items answerable from analysis are written directly — no unnecessary interview
+- Output: `.harness/spec.md`
+
 ---
 
 ## Validation Gates
@@ -240,11 +284,14 @@ What the plugin creates in your project:
 your-project/
 └── .harness/
     ├── config.json                  ← project settings (editable)
-    ├── state.json                   ← state (do not edit directly)
+    ├── state.json                   ← implementation cycle state (do not edit directly)
+    ├── analyzer-state.json          ← analysis cycle state (do not edit directly)
     ├── requirements.md              ← REQUIREMENTS output
     ├── roadmap.md                   ← ROADMAP output
     ├── progress.md                  ← DEVELOPMENT output
     ├── review-report.md             ← REVIEW output
+    ├── analysis.md                  ← ANALYSIS output
+    ├── spec.md                      ← SPECIFICATION output
     ├── agents-overrides/*.md        ← (optional) project-specific instruction overrides from retro
     └── retrospectives/
         └── <YYYY-MM-DD>.md          ← retrospective reports
@@ -269,10 +316,15 @@ gil-harness/
 │   ├── development-validator.md
 │   ├── reviewer.md
 │   ├── review-validator.md
+│   ├── analyzer.md
+│   ├── analysis-validator.md
+│   ├── specifier.md
+│   ├── spec-validator.md
 │   └── retrospective.md
 └── commands/                        ← slash commands
     ├── init.md
     ├── run.md
+    ├── analyze.md
     ├── validate.md
     ├── status.md
     ├── advance.md
