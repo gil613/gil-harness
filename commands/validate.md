@@ -5,14 +5,14 @@ allowed-tools: Read, Edit, Bash, Task
 
 # /harness:validate
 
-Judges whether the current stage artifacts meet the quality bar to advance to the next stage. Proceeds in two phases:
+Judges whether the current stage artifacts meet the quality bar to advance to the next stage. The validation path depends on the stage:
 
-1. **Deterministic validation** — run typecheck/lint/test/build directly via Bash in the parent session
-2. **Inferential validation** — a validation sub-agent (Task) judges artifact quality
+- **REQUIREMENTS / ROADMAP** — structural pre-checks (Bash) followed by **inferential validation**: a validator sub-agent (Task) judges artifact quality.
+- **DEVELOPMENT / REVIEW** — **fully deterministic**: the typecheck/lint/test/build commands plus structural checks on the stage artifact. No validator sub-agent. The inferential safety net for code is the `reviewer` agent itself — it reads the actual source in the REVIEW stage, a stronger check than re-reading `progress.md` prose. The REVIEW deterministic check then routes the reviewer's recorded verdict.
 
 ### Discipline (when invoked inline from `/harness:run`)
 
-This procedure runs inside `/harness:run`'s tight tool-driven loop. The same **0-character output budget between tool calls** rule applies: the only user-visible text is the literal `messages.*` strings the procedure mandates and the deterministic results table. No greetings, no plan announcements, no summaries of intermediate Reads, no "I will now run typecheck…" narration. Read → Bash → Bash → Task → Edit, with mandated message prints inserted only where the procedure says so.
+This procedure runs inside `/harness:run`'s tight tool-driven loop. The same **0-character output budget between tool calls** rule applies: the only user-visible text is the literal `messages.*` strings the procedure mandates and the deterministic results table. No greetings, no plan announcements, no summaries of intermediate Reads, no "I will now run typecheck…" narration. Read → Bash → … → Edit, with mandated message prints inserted only where the procedure says so.
 
 **Language**: All `messages.*` output MUST use the `config.uiLanguage` variant — if `uiLanguage === 'ko'`, print Korean text. Defaulting to English for a Korean-language project is a protocol violation.
 
@@ -59,18 +59,24 @@ Append `| exit <code>` only on FAIL or ERROR. Do not write raw stdout/stderr to 
 
 #### Deterministic failure handling
 
-If any FAIL/ERROR/TIMEOUT occurs, do not proceed to inferential validation and fail immediately:
+If any FAIL/ERROR/TIMEOUT occurs, do not proceed to step 2b structural validation and fail immediately:
 
 - `cause` = `messages.deterministic_cause` populated with `<label>`, `<status>`, `<code>`
 - `plan` = `messages.deterministic_plan` populated with `<label>`, `<command>`
 - If current stage is `REVIEW`, also set internal flag `regressTo = "DEVELOPMENT"` (broken code requires the developer agent, not another reviewer pass)
 - Proceed to the "failure handling" procedure (step 5 below)
 
-### 2b. Structural pre-checks (REQUIREMENTS and ROADMAP stages only)
+### 2b. Structural validation
 
-Run only when stage is `REQUIREMENTS` or `ROADMAP`. Skip for DEVELOPMENT/REVIEW (step 2 covers those).
+Bash checks on the current stage's artifact. For `REQUIREMENTS` / `ROADMAP` these are **pre-checks** that catch obvious structural failures before the inferential call in step 3. For `DEVELOPMENT` / `REVIEW` these are the **complete artifact validation** — there is no step-3 sub-agent for those stages.
 
-These bash checks catch obvious structural failures before the inferential LLM call. If any fail, skip directly to step 5b (failure handling).
+Run only the subsection matching the current stage. Always double-quote paths. `grep -c` prints the count (`0` included) on stdout regardless of exit code.
+
+Routing after this step:
+
+- Any check fails → set `cause` / `plan` (and `regressTo` where the subsection says so) and skip to step 5b.
+- All checks pass AND stage is `DEVELOPMENT` or `REVIEW` → artifact validation is complete; **skip steps 3–4** and go to step 5a.
+- All checks pass AND stage is `REQUIREMENTS` or `ROADMAP` → continue to step 3.
 
 #### REQUIREMENTS
 
@@ -92,7 +98,60 @@ grep -c "^T[0-9]" ".harness/roadmap.md" 2>/dev/null || echo "0"
 - File missing → FAIL: `cause` = `messages.structural_missing` with `{file}=roadmap.md`, `plan` = `messages.structural_missing_plan` with `{file}=roadmap.md`
 - Task count == 0 → FAIL: `cause` = `messages.structural_no_tasks`, `plan` = `messages.structural_no_tasks_plan`
 
-### 3. Inferential validation — call validation sub-agent
+#### DEVELOPMENT
+
+Reached only after step 2's deterministic commands all PASS/SKIP. Validates `.harness/progress.md`.
+
+```bash
+test -f ".harness/progress.md" && echo "progress=EXISTS" || echo "progress=MISSING"
+for h in "## Done" "## In Progress" "## Pending" "## Failure History"; do
+  printf '%s=' "$h"; grep -cFx "$h" ".harness/progress.md" 2>/dev/null
+done
+echo "open=$(grep -cE '^- \[ \]' '.harness/progress.md' 2>/dev/null)"
+echo "failures=$(grep -cE '^- T[0-9]' '.harness/progress.md' 2>/dev/null)"
+echo "done=$(grep -cE '^- \[x\]' '.harness/progress.md' 2>/dev/null)"
+echo "total=$(grep -cE '^T[0-9]' '.harness/roadmap.md' 2>/dev/null)"
+```
+
+Evaluate in order; on the first failing check set `cause` / `plan` and skip to step 5b. **All DEVELOPMENT failures are same-stage retries** (never set `regressTo`).
+
+1. `progress=MISSING` → `cause` = `messages.structural_missing` with `{file}=progress.md`, `plan` = `messages.structural_missing_plan` with `{file}=progress.md`
+2. Any of the four headers not present exactly once → `cause` = `messages.dev_struct_headers`, `plan` = `messages.dev_struct_headers_plan`
+3. `open + failures > 0` (unfinished `- [ ]` items or `- T..` Failure History entries remain) → `cause` = `messages.dev_struct_incomplete` with `{open}` and `{failures}`, `plan` = `messages.dev_struct_incomplete_plan`
+4. `done ≠ total` → `cause` = `messages.dev_struct_coverage` with `{done}` and `{total}`, `plan` = `messages.dev_struct_coverage_plan`
+
+All four pass → DEVELOPMENT validation PASS; go to step 5a.
+
+> Semantic acceptance-criteria verification is **not** done here. It is the `reviewer` agent's job in the next stage — the reviewer reads the actual source, which subsumes re-judging `progress.md` evidence prose.
+
+#### REVIEW
+
+Reached only after step 2's deterministic commands all PASS/SKIP. Validates `.harness/review-report.md`.
+
+```bash
+test -f ".harness/review-report.md" && echo "report=EXISTS" || echo "report=MISSING"
+for h in "## Verification Command Results" "## Findings and Actions" "### Critical" "### Major" "### Minor" "## Final Verdict"; do
+  printf '%s=' "$h"; grep -cFx "$h" ".harness/review-report.md" 2>/dev/null
+done
+echo "markers=$(grep -cE '\[Fixed\]|\[Resolved\]|\[수정 완료\]|\[해결됨\]' '.harness/review-report.md' 2>/dev/null)"
+awk '/^### Critical$/{s=1;next} /^### Major$/{s=2;next} /^### Minor$/{s=3;next} /^## /{s=0} s==1&&/^- /{c++} s==2&&/^- /{m++} END{print "critical="c+0" major="m+0}' ".harness/review-report.md" 2>/dev/null
+echo "verdict=$(grep -A2 -Fx '## Final Verdict' '.harness/review-report.md' 2>/dev/null | grep -oE 'PASS|FAIL' | head -1)"
+```
+
+`critical` / `major` count column-0 `- ` bullets inside the `### Critical` / `### Major` sections — the reviewer agent's mandated finding format (empty section = the literal `_none_`, one bullet = one finding).
+
+Evaluate in order; on the first failing check set `cause` / `plan` (and `regressTo` where noted) and skip to step 5b.
+
+1. `report=MISSING`, OR any of the six headers not present exactly once, OR `verdict` is neither `PASS` nor `FAIL` → reviewer output defect → `cause` = `messages.review_struct_defect`, `plan` = `messages.review_struct_defect_plan`. **Same-stage retry** — do NOT set `regressTo`.
+2. `markers > 0` → reviewer applied in-place fixes → `cause` = `messages.review_struct_markers`, `plan` = `messages.review_struct_markers_plan`, set `regressTo = "DEVELOPMENT"`.
+3. `critical + major > 0` → `cause` = `messages.review_struct_findings` with `{critical}` and `{major}`, `plan` = `messages.review_struct_findings_plan`, set `regressTo = "DEVELOPMENT"`.
+4. `verdict == FAIL` → `cause` = `messages.review_struct_verdict`, `plan` = `messages.review_struct_verdict_plan`, set `regressTo = "DEVELOPMENT"`.
+
+All checks pass (report well-formed, no markers, zero Critical/Major, `verdict == PASS`) → REVIEW validation PASS; go to step 5a (advances to `DONE`).
+
+### 3. Inferential validation — call validator sub-agent (REQUIREMENTS and ROADMAP only)
+
+Run only when stage is `REQUIREMENTS` or `ROADMAP`. For `DEVELOPMENT` / `REVIEW`, step 2b already produced the verdict — those stages never reach this step.
 
 stage → sub-agent:
 
@@ -100,8 +159,6 @@ stage → sub-agent:
 |-------|-----------|
 | REQUIREMENTS | requirements-validator |
 | ROADMAP | roadmap-validator |
-| DEVELOPMENT | development-validator |
-| REVIEW | review-validator |
 
 #### 3-1. Load overrides
 
@@ -129,16 +186,7 @@ in English. See your agent's "Output Language" section for the exact list.
 [ATTACHED ARTIFACTS]
 REQUIREMENTS: requirements.md
 ROADMAP: requirements.md, roadmap.md
-DEVELOPMENT: requirements.md, roadmap.md, progress.md
-REVIEW: requirements.md, roadmap.md, review-report.md
 (inline each file's content inside ``` fences)
-
-[DETERMINISTIC VALIDATION RESULTS]   ← DEVELOPMENT/REVIEW only
-| Label | Status | exit | ms |
-| --- | --- | --- | --- |
-| typecheck | ... | ... | ... |
-...
-(inline the full table)
 
 [OVERRIDE]   ← only when agents-overrides file exists
 <file contents verbatim>
@@ -150,14 +198,16 @@ or
   VALIDATION_RESULT: FAIL
   REASON: <one line>
   FIX_PLAN: <remediation direction>
-or (regress to a previous stage — only when the validator agent supports it; e.g., review-validator)
+or (regress to a previous stage — only when the validator agent supports it)
   VALIDATION_RESULT: FAIL
   REASON: <one line>
   FIX_PLAN: <remediation direction>
   REGRESS_TO: <STAGE NAME>
 ```
 
-### 4. Parse result
+### 4. Parse result (REQUIREMENTS and ROADMAP only)
+
+For `DEVELOPMENT` / `REVIEW`, step 2b already set the verdict plus `cause` / `plan` / `regressTo` — skip straight to step 5.
 
 From the text returned by the sub-agent:
 
@@ -167,7 +217,7 @@ From the text returned by the sub-agent:
 
 ### 5a. PASS handling
 
-Append the inferential result to `.harness/logs/pipeline.log` (use the actual validator sub-agent name from the table in step 3):
+Append the validation result to `.harness/logs/pipeline.log`. For `<validator-name>` use the step-3 sub-agent name (REQUIREMENTS/ROADMAP) or the literal `structural` (DEVELOPMENT/REVIEW):
 
 `echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") | <stage> | <validator-name> | PASS" >> ".harness/logs/pipeline.log"`
 
@@ -187,9 +237,14 @@ Omit `messages.next_hint` when called inline within the `/harness:run` loop — 
 
 ### 5b. FAIL handling
 
-Extract `REASON: <one line>` and `FIX_PLAN: <block>` from the sub-agent response. Also use the `regressTo` flag set in step 2 (deterministic) or step 4 (REGRESS_TO).
+Determine `cause` and `plan`:
 
-Append the inferential result to `.harness/logs/pipeline.log` (validator name from step 3; REASON condensed to one line):
+- REQUIREMENTS / ROADMAP: extract `REASON: <one line>` → `cause` and `FIX_PLAN: <block>` → `plan` from the sub-agent response.
+- DEVELOPMENT / REVIEW, or any step 2 / 2b structural failure: `cause` / `plan` are already populated from the `messages.*` entries by step 2 or step 2b.
+
+Use the `regressTo` flag set in step 2 (deterministic REVIEW failure), step 2b (REVIEW structural failure), or step 4 (REGRESS_TO).
+
+Append the validation result to `.harness/logs/pipeline.log` (`<validator-name>` = step-3 sub-agent name for REQUIREMENTS/ROADMAP, else `structural`; REASON condensed to one line):
 
 `echo "$(date -u +"%Y-%m-%dT%H:%M:%SZ") | <stage> | <validator-name> | FAIL | <REASON>" >> ".harness/logs/pipeline.log"`
 
@@ -321,6 +376,76 @@ If `new iteration >= maxRetries`, additionally print `messages.retry_limit_reach
 
 - **en**: `Re-run the roadmap designer to generate task definitions in roadmap.md`
 - **ko**: `로드맵 디자이너를 다시 실행하여 roadmap.md에 태스크를 정의하세요`
+
+### `dev_struct_headers`
+
+- **en**: `Structural check failed — progress.md is missing required section headers (Done / In Progress / Pending / Failure History)`
+- **ko**: `구조 검사 실패 — progress.md에 필수 섹션 헤더(Done / In Progress / Pending / Failure History)가 누락됨`
+
+### `dev_struct_headers_plan`
+
+- **en**: `Restore all four "## " section headers in progress.md exactly as the developer agent's output template specifies`
+- **ko**: `progress.md에 네 개의 "## " 섹션 헤더를 developer 에이전트 출력 템플릿대로 정확히 복원하세요`
+
+### `dev_struct_incomplete`
+
+- **en**: `Structural check failed — progress.md still has unfinished work (open items: {open}, Failure History entries: {failures})`
+- **ko**: `구조 검사 실패 — progress.md에 미완 작업이 남음 (미완 항목: {open}건, Failure History: {failures}건)`
+
+### `dev_struct_incomplete_plan`
+
+- **en**: `Finish every remaining task and remove resolved Failure History entries — In Progress, Pending, and Failure History must all be empty to leave DEVELOPMENT`
+- **ko**: `남은 태스크를 모두 완료하고 해결된 Failure History 항목을 제거하세요 — In Progress·Pending·Failure History가 모두 비어야 DEVELOPMENT를 벗어납니다`
+
+### `dev_struct_coverage`
+
+- **en**: `Structural check failed — Done task count ({done}) does not match roadmap task count ({total})`
+- **ko**: `구조 검사 실패 — Done 태스크 수({done})가 로드맵 태스크 수({total})와 불일치`
+
+### `dev_struct_coverage_plan`
+
+- **en**: `Implement every roadmap task (T01, T02, ...) and record it under Done in progress.md with per-AC evidence`
+- **ko**: `로드맵의 모든 태스크(T01, T02, ...)를 구현하고 progress.md의 Done에 AC별 증거와 함께 기록하세요`
+
+### `review_struct_defect`
+
+- **en**: `Structural check failed — review-report.md is malformed (missing required sections or unparseable Final Verdict)`
+- **ko**: `구조 검사 실패 — review-report.md 형식 오류 (필수 섹션 누락 또는 Final Verdict 파싱 불가)`
+
+### `review_struct_defect_plan`
+
+- **en**: `Re-run the reviewer agent and emit review-report.md with all required sections and a PASS/FAIL Final Verdict`
+- **ko**: `reviewer 에이전트를 다시 실행해 필수 섹션과 PASS/FAIL Final Verdict를 모두 갖춘 review-report.md를 생성하세요`
+
+### `review_struct_markers`
+
+- **en**: `Structural check failed — review-report.md contains in-place fix markers; the reviewer is discovery-only`
+- **ko**: `구조 검사 실패 — review-report.md에 직접 수정 마커가 있음; 리뷰어는 발견 전용`
+
+### `review_struct_markers_plan`
+
+- **en**: `Treat every marked item as an open finding. The developer agent applies the fixes in the DEVELOPMENT stage`
+- **ko**: `마커가 붙은 항목을 모두 미해결 finding으로 처리하세요. 수정은 DEVELOPMENT 단계에서 developer 에이전트가 담당합니다`
+
+### `review_struct_findings`
+
+- **en**: `Review found blocking issues — Critical: {critical}, Major: {major}`
+- **ko**: `리뷰에서 차단 이슈 발견 — Critical: {critical}건, Major: {major}건`
+
+### `review_struct_findings_plan`
+
+- **en**: `Fix every Critical and Major finding listed in review-report.md, then re-run the pipeline`
+- **ko**: `review-report.md에 나열된 Critical·Major finding을 모두 수정한 뒤 파이프라인을 다시 실행하세요`
+
+### `review_struct_verdict`
+
+- **en**: `Review Final Verdict is FAIL`
+- **ko**: `리뷰 Final Verdict가 FAIL`
+
+### `review_struct_verdict_plan`
+
+- **en**: `Address the issues recorded in review-report.md's Final Verdict reason, then re-run the pipeline`
+- **ko**: `review-report.md의 Final Verdict 사유에 적힌 문제를 해결한 뒤 파이프라인을 다시 실행하세요`
 
 ### `retry_limit_reached`
 

@@ -90,17 +90,27 @@ tools: Read, Glob, Grep
 ## 발견 및 처리
 
 ### Critical
-[없음 또는 목록 — file:line + 설명 + 수정 방향 제안]
+_none_
 
 ### Major
-[없음 또는 목록 — file:line + 설명 + 수정 방향 제안]
+_none_
 
 ### Minor
-[없음 또는 목록 — file:line + 설명]
+_none_
 
 ## 최종 판정
 PASS / FAIL
 이유: [FAIL인 경우 Critical/Major 항목을 간략히 나열]
 ```
+
+### finding 포맷 (기계 파싱 — 엄격)
+
+하네스 REVIEW 검증은 각 심각도 섹션을 스캔해 finding 수를 결정론적으로 센다. 정확히 따를 것:
+
+- **빈 섹션**: `_none_` 한 줄만 적는다.
+- **finding 있는 섹션**: finding 하나당 **열 0 위치의 `- ` 불릿** 하나. 불릿 첫 줄에 `file:line — 설명`. 이어지는 내용(수정 방향 등)은 2칸 이상 들여써서 새 불릿이 되지 않게 한다.
+- 섹션을 비워두거나 불릿 대신 산문 문단을 쓰지 않는다.
+
+판정 게이트는 기계적으로 도출된다 — `### Critical`/`### Major` 아래 열 0 `- ` 불릿이 하나라도 있으면 FAIL + DEVELOPMENT로 회귀한다. `## 최종 판정`의 PASS는 Critical·Major가 모두 `_none_`일 때만 유효하다.
 
 저장 완료 후 호출자에게 한 줄 보고. `.harness/state.json`을 직접 수정하지 않는다. 어떤 소스 파일도 수정하지 않는다.

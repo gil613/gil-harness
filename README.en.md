@@ -32,7 +32,7 @@ ANALYSIS → SPECIFICATION → DONE
 
 The two cycles use separate state files (`state.json` / `analyzer-state.json`) and can run independently without conflict.
 
-Each stage has a dedicated worker sub-agent that does the work and a validator sub-agent that reviews the output. On validation failure, the cause and fix plan are recorded in the state file and the stage is retried. After `maxRetries` (default 3), user intervention is requested.
+Each stage has a dedicated worker sub-agent that does the work. How the output is reviewed depends on the stage — REQUIREMENTS/ROADMAP use a validator sub-agent, while DEVELOPMENT/REVIEW use deterministic checks (running the verification commands + structural artifact checks). On validation failure, the cause and fix plan are recorded in the state file and the stage is retried. After `maxRetries` (default 3), user intervention is requested.
 
 ---
 
@@ -75,7 +75,7 @@ claude --plugin-dir ./gil-harness
 | `/harness:init` | Auto-analyzes the current project → generates `.harness/config.json`, `.harness/state.json` |
 | `/harness:run` | **Implementation cycle auto-loop** — repeats run→validate until DONE or retry limit, no manual input needed |
 | `/harness:analyze` | **Analysis cycle auto-loop** — ANALYSIS→SPECIFICATION→DONE, runs independently of the implementation cycle |
-| `/harness:validate` | Deterministic checks (typecheck/lint/test/build via Bash) + inferential validation (sub-agent) |
+| `/harness:validate` | Per-stage artifact validation — REQ/ROADMAP use inferential (sub-agent), DEV/REVIEW use deterministic (commands + structural checks) |
 | `/harness:status` | Single-screen progress summary |
 | `/harness:advance` | Force-advance to the next stage skipping validation (emergency use, requires confirmation) |
 | `/harness:reset` | Reset iteration/failures — use after modifying instructions when `maxRetries` is exceeded |
@@ -111,13 +111,13 @@ If `.harness/agents-overrides/<subagent>.md` exists, the retrospective-generated
 
 ### `/harness:validate`
 
-Reviews artifacts in two passes.
+Reviews artifacts per stage.
 
-1. **Deterministic validation** (DEVELOPMENT/REVIEW only): the parent session runs `typecheckCmd → lintCmd → testCmd → buildCmd` sequentially via Bash. If any command fails, inferential validation is skipped and the stage fails immediately.
-2. **Inferential validation**: stage-specific validator sub-agents (`requirements-validator`, `roadmap-validator`, `development-validator`, `review-validator`) judge artifact quality. The last line must be `VALIDATION_RESULT: PASS|FAIL` + (if FAIL) `REASON`/`FIX_PLAN`.
+- **REQUIREMENTS / ROADMAP**: structural pre-checks (Bash) + **inferential validation** — a validator sub-agent (`requirements-validator`, `roadmap-validator`) judges artifact quality.
+- **DEVELOPMENT / REVIEW**: **deterministic only** — runs `typecheckCmd → lintCmd → testCmd → buildCmd` plus structural checks on the artifact (`progress.md` / `review-report.md`). No validator sub-agent. The semantic check for code is the `reviewer` agent, which reads the actual source in the REVIEW stage — a stronger check than re-reading `progress.md` prose. The REVIEW deterministic check then parses the reviewer's recorded verdict (Critical/Major findings, Final Verdict) and routes accordingly.
 
 PASS → advance to next stage + reset `iteration=0`, `failures=[]`, update `lastValidated`.
-FAIL → `iteration += 1`, append to `failures` array (capped at 20 most recent).
+FAIL → `iteration += 1`, append to `failures` array (capped at 20 most recent). A REVIEW failure that needs code changes regresses to DEVELOPMENT.
 
 ### `/harness:status`
 
@@ -244,7 +244,9 @@ To update the plugin to a newer version: `claude plugin update harness`
 
 ## Validation Gates
 
-At the end of each stage, the validator sub-agent reviews the artifact. The last line must be the verdict:
+At the end of each stage the artifact is reviewed. There are two mechanisms:
+
+**Inferential validation** (REQUIREMENTS / ROADMAP) — a validator sub-agent judges artifact quality and emits the verdict on its last line:
 
 ```
 VALIDATION_RESULT: PASS
@@ -255,6 +257,8 @@ VALIDATION_RESULT: FAIL
 REASON: [one-line failure cause]
 FIX_PLAN: [what to focus on when retrying]
 ```
+
+**Deterministic validation** (DEVELOPMENT / REVIEW) — the verdict comes purely from running the verification commands plus structural checks on the artifact (Bash), with no LLM call. The semantic code check is handled by the `reviewer` worker, which reads the actual source in the REVIEW stage.
 
 Failures are recorded in the `state.json` `failures` array (capped at 20). The next worker session receives this cause/plan as context so it starts with an informed fix direction.
 
@@ -313,9 +317,7 @@ gil-harness/
 │   ├── roadmap-designer.md
 │   ├── roadmap-validator.md
 │   ├── developer.md
-│   ├── development-validator.md
 │   ├── reviewer.md
-│   ├── review-validator.md
 │   ├── analyzer.md
 │   ├── analysis-validator.md
 │   ├── specifier.md

@@ -11,10 +11,10 @@ allowed-tools: Read, Edit, Bash, Task
 
 # /harness:validate
 
-현재 스테이지 산출물이 다음 단계로 넘어갈 수 있는 품질인지 판정한다. 두 단계로 진행한다:
+현재 스테이지 산출물이 다음 단계로 넘어갈 수 있는 품질인지 판정한다. 검증 경로는 스테이지에 따라 다르다:
 
-1. **결정론 검증** — 부모 세션에서 Bash로 typecheck/lint/test/build 직접 실행
-2. **추론 검증** — 검증 서브에이전트(Task)가 산출물 품질 판정
+- **REQUIREMENTS / ROADMAP** — 구조 사전검사(Bash) + **추론 검증**(검증 서브에이전트가 Task로 산출물 품질 판정)
+- **DEVELOPMENT / REVIEW** — **완전 결정론** — typecheck/lint/test/build 명령어 실행 + 산출물 구조 검사. 검증 서브에이전트 없음. 코드의 의미 검증은 REVIEW 단계의 `reviewer`가 실제 소스를 읽으며 담당한다 — `progress.md` 산문을 재심사하는 것보다 강한 검사다.
 
 ## 절차
 
@@ -63,11 +63,15 @@ stage가 `DEVELOPMENT` 또는 `REVIEW`일 때만 실행. REQUIREMENTS/ROADMAP은
 - 현재 stage가 `REVIEW`이면 내부 플래그 `regressTo = "DEVELOPMENT"` 설정 (깨진 코드는 리뷰어 재시도가 아니라 개발자 에이전트가 수정해야 함)
 - "실패 처리" 절차로 진행 (아래 5번)
 
-### 2b. 구조 사전검사 (REQUIREMENTS, ROADMAP 단계에만)
+### 2b. 구조 검증
 
-stage가 `REQUIREMENTS` 또는 `ROADMAP`일 때만 실행. DEVELOPMENT/REVIEW는 스킵 (2번에서 처리).
+현재 스테이지 산출물에 대한 Bash 검사. REQUIREMENTS/ROADMAP에서는 3번 추론 호출 전 **사전검사**, DEVELOPMENT/REVIEW에서는 산출물 검증 **전부**다 (이 두 스테이지에는 3번 서브에이전트가 없음).
 
-추론 LLM 호출 전에 명백한 구조 실패를 bash로 차단한다. 하나라도 실패하면 5b(실패 처리)로 즉시 이동.
+현재 스테이지에 해당하는 하위 절만 실행한다. 검사 후 라우팅:
+
+- 하나라도 실패 → cause/plan(필요 시 regressTo) 설정 후 5b로 이동
+- 전부 통과 + DEVELOPMENT/REVIEW → 산출물 검증 완료, **3~4번 스킵**하고 5a로
+- 전부 통과 + REQUIREMENTS/ROADMAP → 3번으로 진행
 
 #### REQUIREMENTS
 
@@ -76,8 +80,8 @@ test -f ".harness/requirements.md" && echo "EXISTS" || echo "MISSING"
 grep -ic "TBD\|TODO" ".harness/requirements.md" 2>/dev/null || echo "0"
 ```
 
-- 파일 없음 → FAIL: cause = "구조 사전검사 실패 — requirements.md 없음", plan = "requirements.md를 먼저 생성하는 워커 에이전트를 실행하세요"
-- TBD/TODO 개수 > 0 → FAIL: cause = "구조 사전검사 실패 — requirements.md에 TBD/TODO 미확정 항목이 있습니다", plan = "requirements.md의 TBD/TODO 항목을 모두 구체적인 내용으로 교체한 뒤 /harness:validate를 다시 실행하세요"
+- 파일 없음 → FAIL: cause = "구조 검사 실패 — requirements.md 없음", plan = "requirements.md를 먼저 생성하는 워커 에이전트를 실행하세요"
+- TBD/TODO 개수 > 0 → FAIL: cause = "구조 검사 실패 — requirements.md에 TBD/TODO 미확정 항목이 있습니다", plan = "requirements.md의 TBD/TODO 항목을 모두 구체적인 내용으로 교체한 뒤 /harness:validate를 다시 실행하세요"
 
 #### ROADMAP
 
@@ -86,23 +90,41 @@ test -f ".harness/roadmap.md" && echo "EXISTS" || echo "MISSING"
 grep -c "^T[0-9]" ".harness/roadmap.md" 2>/dev/null || echo "0"
 ```
 
-- 파일 없음 → FAIL: cause = "구조 사전검사 실패 — roadmap.md 없음", plan = "roadmap.md를 먼저 생성하는 워커 에이전트를 실행하세요"
-- 태스크 수 == 0 → FAIL: cause = "구조 사전검사 실패 — roadmap.md에 태스크 정의가 없습니다 (T01, T02, ... 형식 필요)", plan = "로드맵 디자이너를 다시 실행하여 roadmap.md에 태스크를 정의하세요"
+- 파일 없음 → FAIL: cause = "구조 검사 실패 — roadmap.md 없음", plan = "roadmap.md를 먼저 생성하는 워커 에이전트를 실행하세요"
+- 태스크 수 == 0 → FAIL: cause = "구조 검사 실패 — roadmap.md에 태스크 정의가 없습니다 (T01, T02, ... 형식 필요)", plan = "로드맵 디자이너를 다시 실행하여 roadmap.md에 태스크를 정의하세요"
 
-### 3. 추론 검증 — 검증 서브에이전트 호출
+#### DEVELOPMENT
 
-`config.uiLanguage`를 확인해 서브에이전트를 결정한다. `"en"`이면 `-en` 접미사 에이전트를 사용한다.
+2번 결정론 명령어가 모두 PASS/SKIP일 때만 도달. `.harness/progress.md`를 검증한다. 순서대로 평가하고 첫 실패에서 cause/plan 설정 후 5b로. **모든 DEVELOPMENT 실패는 같은 단계 재시도**(regressTo 설정 안 함).
+
+1. `progress.md` 없음 → FAIL
+2. 필수 헤더 4개(`## Done` / `## In Progress` / `## Pending` / `## Failure History`) 중 하나라도 누락 → FAIL
+3. In Progress·Pending 미완 항목(`- [ ]`) 또는 Failure History 항목이 남음 → FAIL
+4. Done 태스크 수 ≠ 로드맵 태스크 수 → FAIL
+
+전부 통과 → DEVELOPMENT 검증 PASS, 5a로. 산출물의 의미(acceptance criteria 충족 여부)는 여기서 판정하지 않는다 — 다음 단계 `reviewer`가 실제 소스를 읽으며 담당한다.
+
+#### REVIEW
+
+2번 결정론 명령어가 모두 PASS/SKIP일 때만 도달. `.harness/review-report.md`를 검증한다. 순서대로 평가하고 첫 실패에서 cause/plan(필요 시 regressTo) 설정 후 5b로.
+
+1. `review-report.md` 없음, 필수 섹션 헤더 6개 중 누락, 또는 Final Verdict 파싱 불가 → FAIL **(같은 단계 재시도)** — reviewer 출력 결함
+2. 직접 수정 마커(`[Fixed]`/`[Resolved]`/`[수정 완료]`/`[해결됨]`) 존재 → FAIL, `regressTo = "DEVELOPMENT"`
+3. Critical/Major finding이 1건 이상 → FAIL, `regressTo = "DEVELOPMENT"`
+4. Final Verdict == FAIL → FAIL, `regressTo = "DEVELOPMENT"`
+
+전부 통과(형식 정상, 마커 없음, Critical/Major 0건, Final Verdict PASS) → REVIEW 검증 PASS, 5a로 (`DONE`으로 이동).
+
+### 3. 추론 검증 — 검증 서브에이전트 호출 (REQUIREMENTS, ROADMAP 단계에만)
+
+stage가 `REQUIREMENTS` 또는 `ROADMAP`일 때만 실행. DEVELOPMENT/REVIEW는 2b에서 이미 판정이 끝났으므로 이 단계에 도달하지 않는다.
 
 stage → 서브에이전트:
 
-| stage | uiLanguage=ko | uiLanguage=en |
-|-------|---------------|---------------|
-| REQUIREMENTS | requirements-validator | requirements-validator-en |
-| ROADMAP | roadmap-validator | roadmap-validator-en |
-| DEVELOPMENT | development-validator | development-validator-en |
-| REVIEW | review-validator | review-validator-en |
-
-`config.uiLanguage`가 없거나 `"ko"`이면 기존 한국어 에이전트 사용.
+| stage | 서브에이전트 |
+|-------|---------------|
+| REQUIREMENTS | requirements-validator |
+| ROADMAP | roadmap-validator |
 
 #### 3-1. 오버라이드 로드
 
@@ -122,16 +144,7 @@ stage → 서브에이전트:
 [첨부 산출물]
 REQUIREMENTS: requirements.md
 ROADMAP: requirements.md, roadmap.md
-DEVELOPMENT: requirements.md, roadmap.md, progress.md
-REVIEW: requirements.md, roadmap.md, review-report.md
 (각 파일 내용을 ``` 펜스로 인라인)
-
-[결정론 검증 결과]   ← DEVELOPMENT/REVIEW에만
-| 라벨 | 상태 | exit | ms |
-| --- | --- | --- | --- |
-| typecheck | ... | ... | ... |
-...
-(전체 표를 인라인)
 
 [오버라이드]   ← agents-overrides 파일이 있을 때만
 <파일 내용 그대로>
@@ -143,14 +156,16 @@ REVIEW: requirements.md, roadmap.md, review-report.md
   VALIDATION_RESULT: FAIL
   REASON: <한 줄>
   FIX_PLAN: <보완 방향>
-또는 (이전 단계로 회귀 — 검증 에이전트가 지원할 때만; 예: review-validator)
+또는 (이전 단계로 회귀 — 검증 에이전트가 지원할 때만)
   VALIDATION_RESULT: FAIL
   REASON: <한 줄>
   FIX_PLAN: <보완 방향>
   REGRESS_TO: <단계명>
 ```
 
-### 4. 결과 파싱
+### 4. 결과 파싱 (REQUIREMENTS, ROADMAP 단계에만)
+
+DEVELOPMENT/REVIEW는 2b에서 이미 판정·cause·plan·regressTo가 정해졌으므로 곧장 5번으로 간다.
 
 서브에이전트가 반환한 텍스트에서:
 

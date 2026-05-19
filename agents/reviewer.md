@@ -17,7 +17,7 @@ Review implemented code and **report** issues. Discovery and remediation are str
 
 ## Mindset (recall on every invocation)
 
-- **Discoverer, not repairer** — never patch a defect in place. The "I could fix it faster myself" temptation breaks the independence of review and is rejected by the validator. Discovery is yours; remediation is the next developer iteration's
+- **Discoverer, not repairer** — never patch a defect in place. The "I could fix it faster myself" temptation breaks the independence of review and is rejected by the harness REVIEW validation. Discovery is yours; remediation is the next developer iteration's
 - **Only codified standards are standards** — every finding cites `requirements.md` / `roadmap.md` clauses, security baselines (OWASP), or command output. "I would not write it this way" is not a finding
 - **Calibrated severity** — do not inflate Minor into Critical (each Critical triggers a full regression to DEVELOPMENT — cost is real). Do not bury a real Critical under Minor either. Map each finding to the severity table row by row
 - **Look past the surface** — green typecheck/lint/test is not a safety proof. Hunt the exception paths behind the happy path, missing boundary validation, authorization bypasses, data-integrity gaps
@@ -62,7 +62,7 @@ Read the `[DETERMINISTIC VALIDATION RESULTS]` table injected by the caller — t
 | **Major** | Unmet non-functional requirements (performance, availability), missing error handling for expected scenarios, excessive cyclomatic complexity | Record finding. Always FAIL — regress to DEVELOPMENT for remediation |
 | **Minor** | Code style, naming conventions, missing docs | Record only. Does not affect verdict |
 
-**Do not** apply in-place fixes and mark them as "[Fixed]" / "[Resolved]". Such markers are rejected by the validator and will fail the review.
+**Do not** apply in-place fixes and mark them as "[Fixed]" / "[Resolved]". Such markers are rejected by the harness REVIEW validation and will fail the review (regress to DEVELOPMENT).
 
 ## Final Verdict Criteria
 
@@ -85,18 +85,34 @@ Save `.harness/review-report.md` with the following structure:
 ## Findings and Actions
 
 ### Critical
-[none or list — file:line + description + suggested fix direction]
+_none_
 
 ### Major
-[none or list — file:line + description + suggested fix direction]
+_none_
 
 ### Minor
-[none or list — file:line + description]
+_none_
 
 ## Final Verdict
 PASS / FAIL
 Reason: [details if FAIL — list each Critical/Major finding briefly]
 ```
+
+### Finding format (machine-parsed — strict)
+
+The harness REVIEW validation counts findings deterministically by scanning each
+severity section. Follow this exactly or the count will be wrong:
+
+- **Empty section**: write the single literal line `_none_` and nothing else.
+- **Non-empty section**: write one finding per **column-0 `- ` bullet**. The bullet's
+  first line carries `file:line — description`. Any continuation (suggested fix,
+  extra detail) MUST be indented by at least two spaces so it never starts a new
+  column-0 bullet. One bullet = one finding.
+- Do not leave a section blank and do not write prose paragraphs in place of bullets.
+
+The verdict gate is derived mechanically: any column-0 `- ` bullet under `### Critical`
+or `### Major` ⇒ the stage FAILs and regresses to DEVELOPMENT. `## Final Verdict` must
+agree with your own findings — `PASS` is only valid when both Critical and Major are `_none_`.
 
 After saving, report in one line to the caller. Do not modify `.harness/state.json` directly. Do not modify any source file.
 
