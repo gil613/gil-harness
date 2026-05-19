@@ -18,17 +18,19 @@
 
 ```
 REQUIREMENTS → ROADMAP → DEVELOPMENT → REVIEW → DONE
-      ↑             ↑           ↑            ↑
-   [검증 게이트]  [검증 게이트] [검증 게이트] [검증 게이트]
+     ↑           ↑           ↑           ↑
+   추론         추론       결정론       결정론
 ```
 
 **분석 사이클** (`/harness:analyze`):
 
 ```
 ANALYSIS → SPECIFICATION → DONE
-    ↑              ↑
-[검증 게이트]  [검증 게이트]
+   ↑            ↑
+ 결정론        추론
 ```
+
+검증 게이트는 두 종류 — **추론**: 검증 서브에이전트(LLM)가 산출물 품질을 판정 · **결정론**: 명령어 실행 + 산출물 구조 검사로 판정 (LLM 호출 없음).
 
 두 사이클은 각각 독립 state 파일(`state.json` / `analyzer-state.json`)을 사용해 충돌 없이 병행 가능하다.
 

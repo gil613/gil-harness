@@ -18,17 +18,19 @@ Everything that is not the model — agent instructions, validation criteria, st
 
 ```
 REQUIREMENTS → ROADMAP → DEVELOPMENT → REVIEW → DONE
-      ↑              ↑           ↑            ↑
- [validation]  [validation] [validation] [validation]
+     ↑           ↑            ↑           ↑
+ inferential inferential deterministic deterministic
 ```
 
 **Analysis cycle** (`/harness:analyze`):
 
 ```
 ANALYSIS → SPECIFICATION → DONE
-    ↑              ↑
-[validation]  [validation]
+   ↑            ↑
+deterministic inferential
 ```
+
+Validation gates come in two kinds — **inferential**: a validator sub-agent (LLM) judges artifact quality · **deterministic**: the verdict comes from running commands + structural checks (no LLM call).
 
 The two cycles use separate state files (`state.json` / `analyzer-state.json`) and can run independently without conflict.
 
