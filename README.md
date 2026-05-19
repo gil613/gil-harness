@@ -260,6 +260,8 @@ FIX_PLAN: [재시도 시 집중할 것]
 
 **결정론 검증** (DEVELOPMENT / REVIEW) — 검증 명령어 실행 + 산출물 구조 검사(Bash)만으로 판정한다. LLM 호출 없음. 의미 수준의 코드 검증은 REVIEW 단계의 `reviewer` 워커가 실제 소스를 읽으며 담당한다.
 
+분석 사이클도 같은 방식으로 나뉜다 — ANALYSIS는 결정론 구조 검사, SPECIFICATION은 추론 검증(`spec-validator`). analysis.md의 의미 검증은 하류 `specifier`와 `spec-validator`의 ANALYSIS 회귀가 담당한다.
+
 실패는 `state.json` `failures` 배열(최근 20개)에 기록되고, 다음 워커 세션은 이 cause/plan을 컨텍스트로 받아 보완 방향을 인지한 채 시작한다.
 
 ---
@@ -319,7 +321,6 @@ gil-harness/
 │   ├── developer.md
 │   ├── reviewer.md
 │   ├── analyzer.md
-│   ├── analysis-validator.md
 │   ├── specifier.md
 │   ├── spec-validator.md
 │   └── retrospective.md

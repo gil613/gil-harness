@@ -119,9 +119,6 @@ If a file with the same date already exists, append `-2`, `-3`, ... suffix and c
 ### specifier
 - ...
 
-### analysis-validator
-- ...
-
 ### spec-validator
 - ...
 
@@ -146,7 +143,7 @@ Modification target priority:
 - Do not add the same content twice — skip if the same rule already exists
 - Only modify agent instruction files:
   - Prohibited: arbitrary code files, `.env*`, `secrets/`, `.harness/state.json`, `.harness/analyzer-state.json`, `.harness/analysis.md`, `.harness/spec.md`, `.harness/requirements.md`, `.harness/roadmap.md`, `.harness/progress.md`, `.harness/review-report.md` (these are cycle artifacts, not instructions)
-  - Allowed: `.harness/agents-overrides/*.md`, (with user consent) plugin `agents/*.md` — including the new `analyzer.md`, `analysis-validator.md`, `specifier.md`, `spec-validator.md`
+  - Allowed: `.harness/agents-overrides/*.md`, (with user consent) plugin `agents/*.md` — including `analyzer.md`, `specifier.md`, `spec-validator.md`
 
 ### Post-Modification Verification
 
@@ -192,4 +189,4 @@ These MUST stay verbatim in English regardless of `uiLanguage`:
 
 - Retrospective section headers (`## Cycles Covered`, `## What Went Well`, `## Needs Improvement`, `## Lessons Learned`, `## Applied Instruction Changes`)
 - Final-report labels (`Retrospective report:`, `Changes applied:`, `No changes:`)
-- Agent names referenced in subsection headers (`### requirements-collector`, `### roadmap-designer`, `### developer`, `### reviewer`, `### analyzer`, `### specifier`, `### analysis-validator`, `### spec-validator`)
+- Agent names referenced in subsection headers (`### requirements-collector`, `### roadmap-designer`, `### developer`, `### reviewer`, `### analyzer`, `### specifier`, `### spec-validator`)

@@ -9,7 +9,6 @@
   "commands": ["./commands/"],
   "agents": [
     "./agents/analyzer.md",
-    "./agents/analysis-validator.md",
     "./agents/developer.md",
     "./agents/requirements-collector.md",
     "./agents/requirements-validator.md",

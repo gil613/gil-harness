@@ -260,6 +260,8 @@ FIX_PLAN: [what to focus on when retrying]
 
 **Deterministic validation** (DEVELOPMENT / REVIEW) — the verdict comes purely from running the verification commands plus structural checks on the artifact (Bash), with no LLM call. The semantic code check is handled by the `reviewer` worker, which reads the actual source in the REVIEW stage.
 
+The analysis cycle follows the same split — ANALYSIS uses a deterministic structural check, SPECIFICATION uses inferential validation (`spec-validator`). The semantic check of analysis.md is absorbed by the downstream `specifier` and `spec-validator`'s regression to ANALYSIS.
+
 Failures are recorded in the `state.json` `failures` array (capped at 20). The next worker session receives this cause/plan as context so it starts with an informed fix direction.
 
 ---
@@ -319,7 +321,6 @@ gil-harness/
 │   ├── developer.md
 │   ├── reviewer.md
 │   ├── analyzer.md
-│   ├── analysis-validator.md
 │   ├── specifier.md
 │   ├── spec-validator.md
 │   └── retrospective.md
