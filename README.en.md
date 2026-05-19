@@ -157,6 +157,8 @@ Completed:
   ROADMAP      — 2026-04-27
 ```
 
+If the fast-path cycle (`/harness:quick`) is in use, `.harness/quick-state.json` is also read and shown as a separate block (the 3 stages PLAN/DEVELOPMENT/REVIEW).
+
 ### `/harness:reset`
 
 | Argument | Action |

@@ -157,6 +157,8 @@ DEVELOPMENT·REVIEW 단계는 `/harness:run`과 동일한 워커(`developer`/`re
   ROADMAP — 2026-04-27
 ```
 
+fast-path 사이클(`/harness:quick`)을 사용 중이면 `.harness/quick-state.json`을 읽어 별도 블록(PLAN/DEVELOPMENT/REVIEW 3단계)으로 함께 표시한다.
+
 ### `/harness:reset`
 
 | 인수 | 동작 |
