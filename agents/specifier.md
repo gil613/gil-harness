@@ -2,7 +2,7 @@
 name: specifier
 description: analysis.md를 바탕으로 사용자와 인터뷰(필요시)를 거쳐 .harness/spec.md 명세를 작성. /harness:analyze의 SPECIFICATION 단계에서 호출.
 tools: Read, Write, Edit, Glob, Grep
-model: opus
+model: sonnet
 ---
 
 # Specifier Agent

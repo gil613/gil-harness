@@ -2,7 +2,7 @@
 name: requirements-validator
 description: Determines whether requirements.md meets quality to advance to the next stage. Called by /harness:validate in REQUIREMENTS stage.
 tools: Read, Grep
-model: sonnet
+model: haiku
 ---
 
 # Requirements Validator Agent

@@ -2,7 +2,7 @@
 name: roadmap-validator
 description: Determines whether roadmap.md meets quality to advance to the development stage. Called by /harness:validate in ROADMAP stage.
 tools: Read, Grep
-model: sonnet
+model: haiku
 ---
 
 # Roadmap Validator Agent
