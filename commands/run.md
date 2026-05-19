@@ -72,7 +72,7 @@ If the last entry in `state.failures` matches the current stage, print `messages
 
 ### LOOP-3. Call worker sub-agent
 
-(Discipline reminder: this step issues multiple Read calls — base instructions, overrides file, prior artifacts (requirements/roadmap/progress) — then a Bash call to log the worker start, then the Task call. Between each step there must be **zero** narration. Read → Read → Read → Read → Bash → Task.)
+(Discipline reminder: this step issues multiple Read calls — base instructions, overrides file, the spec handoff (REQUIREMENTS stage only), prior artifacts (requirements/roadmap/progress) — then a Bash call to log the worker start, then the Task call. Between each step there must be **zero** narration: a run of Read calls → Bash → Task.)
 
 stage → sub-agent mapping:
 
@@ -90,6 +90,10 @@ Read `docs/agent-system-prompt/en/base.md`. This content is injected into every 
 #### Load overrides
 
 If `.harness/agents-overrides/<subagent_type>.md` exists, read it. Otherwise use an empty string.
+
+#### Load spec handoff (REQUIREMENTS stage only)
+
+When the current stage is `REQUIREMENTS`, check whether `.harness/spec.md` exists — it is the decision specification produced by a prior `/harness:analyze` cycle. If it exists, read it; its contents fill the `[SPEC HANDOFF]` block of the Task prompt. If the stage is not REQUIREMENTS, or the file is absent, omit that block entirely.
 
 #### Log worker start
 
@@ -118,6 +122,15 @@ verbatim in English. See your agent's "Output Language" section for the exact li
 
 [BASE INSTRUCTIONS]
 <docs/agent-system-prompt/base.md contents verbatim>
+
+[SPEC HANDOFF]   ← only at the REQUIREMENTS stage, and only when .harness/spec.md exists
+<.harness/spec.md contents verbatim, inside ``` fences>
+
+This is the decision specification from a prior /harness:analyze cycle. If it is
+relevant to this implementation cycle, use it to pre-fill requirements (Decisions /
+Recommendations / Constraints → functional & non-functional requirements; Out of
+Scope → explicit exclusions) and interview the user ONLY for genuine gaps. If it is
+unrelated to this cycle's intent, ignore it and collect requirements normally.
 
 [PREVIOUS ARTIFACTS]
 ROADMAP: requirements.md

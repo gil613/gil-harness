@@ -42,6 +42,8 @@ ANALYSIS → SPECIFICATION → DONE
 
 세 사이클은 각각 독립 state 파일(`state.json` / `quick-state.json` / `analyzer-state.json`)을 사용해 충돌 없이 병행 가능하다.
 
+분석·구현 사이클은 단방향으로 연결된다 — 분석 사이클이 남긴 `spec.md`는 다음 구현 사이클의 REQUIREMENTS 시드로 자동 인계된다.
+
 각 스테이지는 전용 워커 서브에이전트가 작업한다. 산출물 심사는 스테이지에 따라 다르다 — REQUIREMENTS/ROADMAP은 검증 서브에이전트가, DEVELOPMENT/REVIEW는 결정론 검사(명령어 실행 + 산출물 구조 검사)가 담당한다. 검증 실패 시 실패 원인과 수정 계획을 state 파일에 기록하고 재시도한다. `maxRetries`(기본 3) 초과 시 사용자 개입을 요청한다.
 
 ---
@@ -121,6 +123,8 @@ claude --plugin-dir ./gil-harness
 
 스테이지별 검증은 `/harness:run`이 자동으로 수행한다 (절차 정의: `docs/validate.md`) — 별도의 검증 명령은 없다. 검증 동작은 아래 "검증 게이트" 절 참고.
 
+직전에 `/harness:analyze` 사이클이 `.harness/spec.md`를 남겼다면 REQUIREMENTS 단계에서 `requirements-collector`가 이를 자동 인계받는다 — spec의 Decisions·Recommendations·Constraints로 요구사항을 미리 채우고, Out of Scope는 명시적 제외로 옮긴 뒤, 빠진 부분(성공 기준, 미결 Open Questions 등)만 사용자에게 질문한다. spec이 이번 사이클과 무관하면 무시하고 일반 인터뷰를 진행한다.
+
 ### `/harness:quick`
 
 작은 변경(버그 수정·소규모 기능 변경)용 fast-path. **한 번 실행하면 `PLAN→DEVELOPMENT→REVIEW→DONE`을 자동으로 완주한다.** `/harness:run`의 REQUIREMENTS 인터뷰와 ROADMAP 웨이브 설계를 **인터뷰 없는 단일 PLAN 단계**로 압축한다 — `quick-planner`가 변경 요청을 그대로 받아 최소 `roadmap.md`(태스크 1~5개)를 1회 생성한다.
@@ -187,6 +191,8 @@ fast-path 사이클(`/harness:quick`)을 사용 중이면 `.harness/quick-state.
 산출물:
 - `.harness/analysis.md` — 사실 기반 분석 (출처 첨부 Findings, Methodology, Open Questions)
 - `.harness/spec.md` — 의사결정 명세 (Decisions + 근거, Recommendations, Constraints)
+
+`spec.md`는 이후 `/harness:run`을 실행하면 REQUIREMENTS 단계 시드로 자동 인계된다 — 분석 사이클의 결정이 구현 사이클의 요구사항으로 흐른다. (자세한 동작은 위 `/harness:run` 절 참고)
 
 ### `/harness:retro`
 

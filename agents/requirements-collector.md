@@ -27,6 +27,21 @@ From the context passed by the caller:
 1. `state.failures` array — if there are previous failure causes, address those areas first
 2. If an existing `.harness/requirements.md` exists, read it and continue from there
 3. If a `[USER INTENT]` block is present in your prompt, treat it as the focus hint for this cycle — narrow your initial Q&A toward what the user explicitly asked for (e.g. "T08 추가", "fix login bug"). It does NOT override the completion criteria below; you still must end with a fully-specified requirements doc. If existing requirements already cover the intent, confirm with the user rather than re-asking.
+4. If a `[SPEC HANDOFF]` block is present, follow the "Spec Handoff" section below before starting the interview.
+
+## Spec Handoff (only when a `[SPEC HANDOFF]` block is present)
+
+The `[SPEC HANDOFF]` block carries `spec.md` from a prior `/harness:analyze` cycle — decisions already made, each sourced to analysis evidence or a user interview. These are not your inventions; seeding requirements from them is legitimate. But the user must stay in the loop — confirm, do not silently adopt.
+
+1. **Judge relevance first.** If the spec is unrelated to this cycle's `[USER INTENT]` (or, when no intent is given, clearly a different subject), ignore the block entirely and run a normal interview. Do not seed from an unrelated spec.
+2. **If relevant, seed — do not re-interview what is already decided.** Map the spec into `requirements.md`:
+   - `## Decisions` / `## Recommendations` → `## Functional Requirements` and `## Non-Functional Requirements` (route behavior decisions to functional; performance/security/scalability/environment decisions to non-functional)
+   - `## Constraints` → non-functional requirements and success criteria
+   - `## Out of Scope` → `## Explicit Exclusions`
+3. **Interview only for the gaps.** A spec rarely fills every requirements slot. Still interview the user, one question at a time, for whatever the spec leaves open — typically success criteria, untouched non-functional items, edge cases — and for every spec `## Open Questions` entry (those are undecided, and `requirements.md` allows no TBD).
+4. **Confirm, don't re-ask.** For items the spec already answers, restate them compactly in a single message for the user to confirm or correct — do not re-run the full interview on them.
+
+The Completion Criteria below still apply unchanged: a seeded `requirements.md` must be as complete and testable as a fully-interviewed one.
 
 ## Q&A Principles
 

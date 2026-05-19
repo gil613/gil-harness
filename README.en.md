@@ -42,6 +42,8 @@ Validation gates come in two kinds — **inferential**: a validator sub-agent (L
 
 The three cycles use separate state files (`state.json` / `quick-state.json` / `analyzer-state.json`) and can run independently without conflict.
 
+The analysis and implementation cycles are connected one-way — the `spec.md` left by an analysis cycle is automatically handed off as the REQUIREMENTS seed of the next implementation cycle.
+
 Each stage has a dedicated worker sub-agent that does the work. How the output is reviewed depends on the stage — REQUIREMENTS/ROADMAP use a validator sub-agent, while DEVELOPMENT/REVIEW use deterministic checks (running the verification commands + structural artifact checks). On validation failure, the cause and fix plan are recorded in the state file and the stage is retried. After `maxRetries` (default 3), user intervention is requested.
 
 ---
@@ -121,6 +123,8 @@ If `.harness/agents-overrides/<subagent>.md` exists, the retrospective-generated
 
 Per-stage validation runs automatically inside `/harness:run` (procedure defined in `docs/validate.md`) — there is no separate validation command. See the "Validation Gates" section below for how it works.
 
+If a prior `/harness:analyze` cycle left a `.harness/spec.md`, the REQUIREMENTS stage's `requirements-collector` picks it up automatically — it pre-fills requirements from the spec's Decisions/Recommendations/Constraints, maps Out of Scope into explicit exclusions, and only asks the user about the gaps (success criteria, unresolved Open Questions, etc.). If the spec is unrelated to this cycle, it is ignored and a normal interview runs.
+
 ### `/harness:quick`
 
 A fast-path for small changes (bug fixes, minor feature changes). **One invocation runs `PLAN→DEVELOPMENT→REVIEW→DONE` automatically.** It compresses `/harness:run`'s REQUIREMENTS interview and ROADMAP wave design into a **single interview-free PLAN stage** — `quick-planner` takes the change request as-is and produces a minimal `roadmap.md` (1–5 tasks) in one pass.
@@ -187,6 +191,8 @@ If the previous cycle is in DONE, it automatically resets to ANALYSIS and starts
 Outputs:
 - `.harness/analysis.md` — evidence-based analysis (sourced Findings, Methodology, Open Questions)
 - `.harness/spec.md` — decision specification (Decisions + rationale, Recommendations, Constraints)
+
+When you later run `/harness:run`, `spec.md` is automatically handed off as the REQUIREMENTS-stage seed — the analysis cycle's decisions flow into the implementation cycle's requirements. (See the `/harness:run` section above for details.)
 
 ### `/harness:retro`
 
