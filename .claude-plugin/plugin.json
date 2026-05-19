@@ -10,6 +10,7 @@
   "agents": [
     "./agents/analyzer.md",
     "./agents/developer.md",
+    "./agents/quick-planner.md",
     "./agents/requirements-collector.md",
     "./agents/requirements-validator.md",
     "./agents/retrospective.md",

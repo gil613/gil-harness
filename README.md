@@ -22,6 +22,14 @@ REQUIREMENTS → ROADMAP → DEVELOPMENT → REVIEW → DONE
    추론         추론       결정론       결정론
 ```
 
+**fast-path 사이클** (`/harness:quick`) — 작은 변경용:
+
+```
+PLAN → DEVELOPMENT → REVIEW → DONE
+  ↑        ↑           ↑
+결정론    결정론       결정론
+```
+
 **분석 사이클** (`/harness:analyze`):
 
 ```
@@ -32,7 +40,7 @@ ANALYSIS → SPECIFICATION → DONE
 
 검증 게이트는 두 종류 — **추론**: 검증 서브에이전트(LLM)가 산출물 품질을 판정 · **결정론**: 명령어 실행 + 산출물 구조 검사로 판정 (LLM 호출 없음).
 
-두 사이클은 각각 독립 state 파일(`state.json` / `analyzer-state.json`)을 사용해 충돌 없이 병행 가능하다.
+세 사이클은 각각 독립 state 파일(`state.json` / `quick-state.json` / `analyzer-state.json`)을 사용해 충돌 없이 병행 가능하다.
 
 각 스테이지는 전용 워커 서브에이전트가 작업한다. 산출물 심사는 스테이지에 따라 다르다 — REQUIREMENTS/ROADMAP은 검증 서브에이전트가, DEVELOPMENT/REVIEW는 결정론 검사(명령어 실행 + 산출물 구조 검사)가 담당한다. 검증 실패 시 실패 원인과 수정 계획을 state 파일에 기록하고 재시도한다. `maxRetries`(기본 3) 초과 시 사용자 개입을 요청한다.
 
@@ -63,6 +71,7 @@ claude --plugin-dir ./gil-harness
 ```
 /harness:init        # 현재 프로젝트에 .harness/ 초기화
 /harness:run         # 구현 사이클 자동 실행 (REQUIREMENTS→REVIEW→DONE)
+/harness:quick       # 작은 변경 fast-path (PLAN→DEVELOPMENT→REVIEW→DONE)
 /harness:analyze     # 분석 사이클 자동 실행 (ANALYSIS→SPECIFICATION→DONE)
 /harness:status      # 진행 상태 확인
 /harness:retro       # 모든 스테이지 완료 후 회고 + 지침 개선
@@ -76,6 +85,7 @@ claude --plugin-dir ./gil-harness
 |--------|------|
 | `/harness:init` | 현재 프로젝트 자동 분석 → `.harness/config.json`, `.harness/state.json` 생성 |
 | `/harness:run` | **구현 사이클 자동 루프** — DONE 또는 재시도 한계까지 run→validate 반복, 수동 개입 불필요 |
+| `/harness:quick` | **작은 변경용 fast-path 자동 루프** — REQUIREMENTS/ROADMAP을 단일 PLAN으로 압축, PLAN→DEVELOPMENT→REVIEW→DONE |
 | `/harness:analyze` | **분석 사이클 자동 루프** — ANALYSIS→SPECIFICATION→DONE, 구현 사이클과 독립 실행 |
 | `/harness:status` | 진행 상황 한 화면 요약 |
 | `/harness:reset` | iteration/failures 리셋 — `maxRetries` 초과 후 지침 수정하고 재시도할 때 사용 |
@@ -110,6 +120,23 @@ claude --plugin-dir ./gil-harness
 `.harness/agents-overrides/<subagent>.md`가 있으면 회고가 만든 프로젝트 로컬 지침을 프롬프트에 자동 인라인한다.
 
 스테이지별 검증은 `/harness:run`이 자동으로 수행한다 (절차 정의: `docs/validate.md`) — 별도의 검증 명령은 없다. 검증 동작은 아래 "검증 게이트" 절 참고.
+
+### `/harness:quick`
+
+작은 변경(버그 수정·소규모 기능 변경)용 fast-path. **한 번 실행하면 `PLAN→DEVELOPMENT→REVIEW→DONE`을 자동으로 완주한다.** `/harness:run`의 REQUIREMENTS 인터뷰와 ROADMAP 웨이브 설계를 **인터뷰 없는 단일 PLAN 단계**로 압축한다 — `quick-planner`가 변경 요청을 그대로 받아 최소 `roadmap.md`(태스크 1~5개)를 1회 생성한다.
+
+```bash
+/harness:quick login 버튼 색상 토큰화
+/harness:quick config 파서의 null 입력 처리 버그 수정
+```
+
+`/harness:quick` 뒤 문자열이 이번 사이클의 변경 요청이다 — 단순 힌트가 아니라 **요구사항 그 자체**이므로 PLAN 단계에서 비어 있으면 실행을 거부한다.
+
+DEVELOPMENT·REVIEW 단계는 `/harness:run`과 동일한 워커(`developer`/`reviewer`)와 결정론 검증을 그대로 재사용한다. quick 사이클은 별도 `requirements.md`를 만들지 않는다 — `roadmap.md`의 `## Intent` 섹션이 요구사항 기준선이다.
+
+큰 기능 신규 설계나 사용자 인터뷰가 필요한 모호한 요구사항은 fast-path 대상이 아니다 — `quick-planner`가 규모 초과로 판정하면 `/harness:run` 사용을 권하며 실패 종료한다.
+
+`state`는 `.harness/quick-state.json`에 별도 보관돼 `/harness:run`·`/harness:analyze` 사이클과 충돌하지 않는다. 이전 사이클이 DONE이면 자동으로 PLAN으로 리셋해 새 사이클을 시작한다.
 
 ### `/harness:status`
 
@@ -202,6 +229,14 @@ claude --plugin-dir ./gil-harness
 - Wave 기반 실행 순서
 - 산출물: `.harness/roadmap.md`
 
+### PLAN — 압축 계획 (`quick-planner`, `/harness:quick` 전용)
+
+- REQUIREMENTS + ROADMAP을 인터뷰 없는 단일 단계로 압축
+- 변경 요청을 요구사항으로 직접 사용, 미명시 항목은 가정으로 기록
+- 최소 태스크(1~5개) — 각 태스크는 수직 슬라이스 + acceptance criteria
+- 규모 초과(6+ 태스크·인터뷰 필요·전체 신규 설계) 시 `/harness:run` 권고하며 실패
+- 산출물: `.harness/roadmap.md` (`## Intent` / `## Assumptions` / `## Task List` / `## Notes`)
+
 ### DEVELOPMENT — 구현 (`developer`)
 
 - 한 번에 한 태스크
@@ -250,6 +285,8 @@ FIX_PLAN: [재시도 시 집중할 것]
 
 분석 사이클도 같은 방식으로 나뉜다 — ANALYSIS는 결정론 구조 검사, SPECIFICATION은 추론 검증(`spec-validator`). analysis.md의 의미 검증은 하류 `specifier`와 `spec-validator`의 ANALYSIS 회귀가 담당한다.
 
+fast-path 사이클(`/harness:quick`)은 PLAN을 결정론 구조 검사로 심사하며 추론 ROADMAP 검증은 의도적으로 생략한다 — 계획 품질의 의미 검증은 하류 `developer` 실행과 REVIEW 단계 `reviewer`가 담당한다. DEVELOPMENT/REVIEW는 구현 사이클과 동일한 결정론 검증(`docs/validate.md`)을 그대로 재사용한다.
+
 실패는 `state.json` `failures` 배열(최근 20개)에 기록되고, 다음 워커 세션은 이 cause/plan을 컨텍스트로 받아 보완 방향을 인지한 채 시작한다.
 
 ---
@@ -279,9 +316,10 @@ your-project/
 └── .harness/
     ├── config.json                  ← 프로젝트 설정 (수정 가능)
     ├── state.json                   ← 구현 사이클 상태 (직접 수정 금지)
+    ├── quick-state.json             ← fast-path 사이클 상태 (직접 수정 금지)
     ├── analyzer-state.json          ← 분석 사이클 상태 (직접 수정 금지)
     ├── requirements.md              ← REQUIREMENTS 산출물
-    ├── roadmap.md                   ← ROADMAP 산출물
+    ├── roadmap.md                   ← ROADMAP / quick PLAN 산출물
     ├── progress.md                  ← DEVELOPMENT 산출물
     ├── review-report.md             ← REVIEW 산출물
     ├── analysis.md                  ← ANALYSIS 산출물
@@ -307,6 +345,7 @@ gil-harness/
 │   ├── requirements-validator.md
 │   ├── roadmap-designer.md
 │   ├── roadmap-validator.md
+│   ├── quick-planner.md
 │   ├── developer.md
 │   ├── reviewer.md
 │   ├── analyzer.md
@@ -316,6 +355,7 @@ gil-harness/
 └── commands/                        ← 슬래시 명령어
     ├── init.md
     ├── run.md
+    ├── quick.md
     ├── analyze.md
     ├── status.md
     ├── reset.md

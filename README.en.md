@@ -22,6 +22,14 @@ REQUIREMENTS → ROADMAP → DEVELOPMENT → REVIEW → DONE
  inferential inferential deterministic deterministic
 ```
 
+**Fast-path cycle** (`/harness:quick`) — for small changes:
+
+```
+PLAN → DEVELOPMENT → REVIEW → DONE
+  ↑          ↑           ↑
+deterministic deterministic deterministic
+```
+
 **Analysis cycle** (`/harness:analyze`):
 
 ```
@@ -32,7 +40,7 @@ deterministic inferential
 
 Validation gates come in two kinds — **inferential**: a validator sub-agent (LLM) judges artifact quality · **deterministic**: the verdict comes from running commands + structural checks (no LLM call).
 
-The two cycles use separate state files (`state.json` / `analyzer-state.json`) and can run independently without conflict.
+The three cycles use separate state files (`state.json` / `quick-state.json` / `analyzer-state.json`) and can run independently without conflict.
 
 Each stage has a dedicated worker sub-agent that does the work. How the output is reviewed depends on the stage — REQUIREMENTS/ROADMAP use a validator sub-agent, while DEVELOPMENT/REVIEW use deterministic checks (running the verification commands + structural artifact checks). On validation failure, the cause and fix plan are recorded in the state file and the stage is retried. After `maxRetries` (default 3), user intervention is requested.
 
@@ -63,6 +71,7 @@ claude --plugin-dir ./gil-harness
 ```
 /harness:init        # Initialize .harness/ in the current project
 /harness:run         # Run the implementation pipeline automatically (REQUIREMENTS→REVIEW→DONE)
+/harness:quick       # Fast-path for small changes (PLAN→DEVELOPMENT→REVIEW→DONE)
 /harness:analyze     # Run the analysis pipeline automatically (ANALYSIS→SPECIFICATION→DONE)
 /harness:status      # Check progress
 /harness:retro       # Retrospective + instruction improvement after all stages complete
@@ -76,6 +85,7 @@ claude --plugin-dir ./gil-harness
 |---------|------|
 | `/harness:init` | Auto-analyzes the current project → generates `.harness/config.json`, `.harness/state.json` |
 | `/harness:run` | **Implementation cycle auto-loop** — repeats run→validate until DONE or retry limit, no manual input needed |
+| `/harness:quick` | **Fast-path auto-loop for small changes** — compresses REQUIREMENTS/ROADMAP into a single PLAN stage, PLAN→DEVELOPMENT→REVIEW→DONE |
 | `/harness:analyze` | **Analysis cycle auto-loop** — ANALYSIS→SPECIFICATION→DONE, runs independently of the implementation cycle |
 | `/harness:status` | Single-screen progress summary |
 | `/harness:reset` | Reset iteration/failures — use after modifying instructions when `maxRetries` is exceeded |
@@ -110,6 +120,23 @@ If the previous cycle is in `DONE`, `/harness:run` no longer bails — it auto-r
 If `.harness/agents-overrides/<subagent>.md` exists, the retrospective-generated project-local instructions are automatically inlined into the prompt.
 
 Per-stage validation runs automatically inside `/harness:run` (procedure defined in `docs/validate.md`) — there is no separate validation command. See the "Validation Gates" section below for how it works.
+
+### `/harness:quick`
+
+A fast-path for small changes (bug fixes, minor feature changes). **One invocation runs `PLAN→DEVELOPMENT→REVIEW→DONE` automatically.** It compresses `/harness:run`'s REQUIREMENTS interview and ROADMAP wave design into a **single interview-free PLAN stage** — `quick-planner` takes the change request as-is and produces a minimal `roadmap.md` (1–5 tasks) in one pass.
+
+```bash
+/harness:quick tokenize the login button color
+/harness:quick fix null-input handling bug in the config parser
+```
+
+The text after `/harness:quick` is this cycle's change request — not a mere hint but **the requirements themselves**, so execution is refused if it is empty at the PLAN stage.
+
+The DEVELOPMENT and REVIEW stages reuse `/harness:run`'s workers (`developer`/`reviewer`) and deterministic validation as-is. The quick cycle creates no separate `requirements.md` — the `## Intent` section of `roadmap.md` is the requirements baseline.
+
+Large new-feature design or ambiguous requirements that need a user interview are not fast-path material — if `quick-planner` judges the request out of scope it recommends `/harness:run` and exits with a failure.
+
+State is kept separately in `.harness/quick-state.json` so it never conflicts with the `/harness:run` or `/harness:analyze` cycles. If the previous cycle is in DONE, it auto-resets to PLAN and starts a fresh cycle.
 
 ### `/harness:status`
 
@@ -202,6 +229,14 @@ To update the plugin to a newer version: `claude plugin update harness`
 - Wave-based execution order
 - Output: `.harness/roadmap.md`
 
+### PLAN — Compressed Planning (`quick-planner`, `/harness:quick` only)
+
+- Compresses REQUIREMENTS + ROADMAP into a single interview-free stage
+- Uses the change request directly as requirements; records unspecified items as assumptions
+- Minimal tasks (1–5) — each a vertical slice with acceptance criteria
+- Exits with a `/harness:run` recommendation when out of scope (6+ tasks, interview needed, full new design)
+- Output: `.harness/roadmap.md` (`## Intent` / `## Assumptions` / `## Task List` / `## Notes`)
+
 ### DEVELOPMENT — Implementation (`developer`)
 
 - One task at a time
@@ -250,6 +285,8 @@ FIX_PLAN: [what to focus on when retrying]
 
 The analysis cycle follows the same split — ANALYSIS uses a deterministic structural check, SPECIFICATION uses inferential validation (`spec-validator`). The semantic check of analysis.md is absorbed by the downstream `specifier` and `spec-validator`'s regression to ANALYSIS.
 
+The fast-path cycle (`/harness:quick`) judges PLAN with a deterministic structural check and deliberately skips inferential ROADMAP validation — the semantic check of the plan is absorbed by the downstream `developer` run and the REVIEW-stage `reviewer`. DEVELOPMENT/REVIEW reuse the implementation cycle's deterministic validation (`docs/validate.md`) as-is.
+
 Failures are recorded in the `state.json` `failures` array (capped at 20). The next worker session receives this cause/plan as context so it starts with an informed fix direction.
 
 ---
@@ -279,9 +316,10 @@ your-project/
 └── .harness/
     ├── config.json                  ← project settings (editable)
     ├── state.json                   ← implementation cycle state (do not edit directly)
+    ├── quick-state.json             ← fast-path cycle state (do not edit directly)
     ├── analyzer-state.json          ← analysis cycle state (do not edit directly)
     ├── requirements.md              ← REQUIREMENTS output
-    ├── roadmap.md                   ← ROADMAP output
+    ├── roadmap.md                   ← ROADMAP / quick PLAN output
     ├── progress.md                  ← DEVELOPMENT output
     ├── review-report.md             ← REVIEW output
     ├── analysis.md                  ← ANALYSIS output
@@ -307,6 +345,7 @@ gil-harness/
 │   ├── requirements-validator.md
 │   ├── roadmap-designer.md
 │   ├── roadmap-validator.md
+│   ├── quick-planner.md
 │   ├── developer.md
 │   ├── reviewer.md
 │   ├── analyzer.md
@@ -316,6 +355,7 @@ gil-harness/
 └── commands/                        ← slash commands
     ├── init.md
     ├── run.md
+    ├── quick.md
     ├── analyze.md
     ├── status.md
     ├── reset.md

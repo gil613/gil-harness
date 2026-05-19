@@ -1,6 +1,6 @@
 # Validation Procedure
 
-> Internal procedure executed inline by `/harness:run` (LOOP-4). Not a standalone slash command. Tools used: Read, Edit, Bash, Task.
+> Internal procedure executed inline by `/harness:run` (LOOP-4). `/harness:quick` reuses its DEVELOPMENT/REVIEW deterministic checks (steps 2 and 2b) for its own fast-path cycle. Not a standalone slash command. Tools used: Read, Edit, Bash, Task.
 
 Judges whether the current stage artifacts meet the quality bar to advance to the next stage. The validation path depends on the stage:
 
