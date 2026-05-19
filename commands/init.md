@@ -126,7 +126,7 @@ Empty strings are allowed (the corresponding check will be SKIPPED).
 
 **Pre-create directories** (idempotent in both modes):
 
-- `.harness/logs/` — deterministic validation log storage (used by `/harness:validate` on first run)
+- `.harness/logs/` — deterministic validation log storage (used by `/harness:run`'s validation step on first run)
 
 Use **quoted relative paths** when calling `mkdir`:
 

@@ -1,6 +1,6 @@
 ---
 name: roadmap-validator
-description: Determines whether roadmap.md meets quality to advance to the development stage. Called by /harness:validate in ROADMAP stage.
+description: Determines whether roadmap.md meets quality to advance to the development stage. Called by the validation step of /harness:run in the ROADMAP stage.
 tools: Read, Grep
 model: haiku
 ---

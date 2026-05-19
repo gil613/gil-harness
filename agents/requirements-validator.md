@@ -1,6 +1,6 @@
 ---
 name: requirements-validator
-description: Determines whether requirements.md meets quality to advance to the next stage. Called by /harness:validate in REQUIREMENTS stage.
+description: Determines whether requirements.md meets quality to advance to the next stage. Called by the validation step of /harness:run in the REQUIREMENTS stage.
 tools: Read, Grep
 model: haiku
 ---

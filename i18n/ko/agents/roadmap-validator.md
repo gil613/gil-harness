@@ -6,7 +6,7 @@
 
 ---
 name: roadmap-validator
-description: roadmap.md가 개발 단계로 넘어갈 품질인지 판정한다. /harness:validate 가 ROADMAP 단계에서 호출.
+description: roadmap.md가 개발 단계로 넘어갈 품질인지 판정한다. /harness:run의 검증 단계가 ROADMAP 단계에서 호출.
 tools: Read, Grep
 ---
 

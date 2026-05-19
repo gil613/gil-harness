@@ -122,11 +122,9 @@ REVIEW: requirements.md, roadmap.md, progress.md
 
 ---
 
-### LOOP-4. 검증 실행 (validate.md 절차 인라인)
+### LOOP-4. 검증 실행 (`docs/validate.md` 절차 인라인)
 
-워커가 정상 종료했으면 `validate.md`의 절차를 **이 세션 안에서 그대로 실행**한다.
-
-validate.md 절차 전체를 인라인으로 수행 후 PASS / FAIL 결과를 내부 변수로 보유한다.
+워커가 정상 종료했으면 검증 절차를 **이 세션 안에서 그대로 실행**한다. 절차는 `docs/validate.md`에 정의돼 있다(슬래시 명령 아님) — 먼저 그 파일을 Read한 뒤 절차 전체를 인라인으로 수행하고 PASS / FAIL 결과를 내부 변수로 보유한다.
 
 ---
 

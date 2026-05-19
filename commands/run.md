@@ -154,17 +154,15 @@ If the sub-agent fails or aborts, do not change state and stop the loop. Print `
 
 #### After Task returns (normal completion)
 
-When the Task tool returns successfully, **WITHOUT generating any further text and without summarizing the worker's output, immediately begin LOOP-4** by issuing the first tool call required by the validate.md procedure as the very next action.
+When the Task tool returns successfully, **WITHOUT generating any further text and without summarizing the worker's output, immediately begin LOOP-4** by issuing its first tool call (`Read docs/validate.md`) as the very next action.
 
 ---
 
-### LOOP-4. Run validation (inline validate.md procedure)
+### LOOP-4. Run validation (inline `docs/validate.md` procedure)
 
-If the worker finishes normally, **execute the validate.md procedure inline within this session**.
+If the worker finishes normally, **execute the validation procedure inline within this session**. The procedure is defined in `docs/validate.md` (not a slash command) — Read that file first, then perform its full procedure inline and hold the PASS / FAIL result as an internal variable.
 
-Perform the full validate.md procedure inline and hold the PASS / FAIL result as an internal variable.
-
-**When validate.md completes (state.json has been updated), WITHOUT generating any further text, immediately call `Read .harness/state.json` as the very next action to begin LOOP-5.** Do not summarize validation results — LOOP-5 will print the appropriate message.
+**When the procedure completes (state.json has been updated), WITHOUT generating any further text, immediately call `Read .harness/state.json` as the very next action to begin LOOP-5.** Do not summarize validation results — LOOP-5 will print the appropriate message.
 
 ---
 

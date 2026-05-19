@@ -6,7 +6,7 @@
 
 ---
 name: requirements-validator
-description: requirements.md가 다음 단계로 넘어갈 품질인지 판정한다. /harness:validate 가 REQUIREMENTS 단계에서 호출.
+description: requirements.md가 다음 단계로 넘어갈 품질인지 판정한다. /harness:run의 검증 단계가 REQUIREMENTS 단계에서 호출.
 tools: Read, Grep
 ---
 

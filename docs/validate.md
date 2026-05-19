@@ -1,16 +1,13 @@
----
-description: Validate current stage artifacts (deterministic + inferential)
-allowed-tools: Read, Edit, Bash, Task
----
+# Validation Procedure
 
-# /harness:validate
+> Internal procedure executed inline by `/harness:run` (LOOP-4). Not a standalone slash command. Tools used: Read, Edit, Bash, Task.
 
 Judges whether the current stage artifacts meet the quality bar to advance to the next stage. The validation path depends on the stage:
 
 - **REQUIREMENTS / ROADMAP** — structural pre-checks (Bash) followed by **inferential validation**: a validator sub-agent (Task) judges artifact quality.
 - **DEVELOPMENT / REVIEW** — **fully deterministic**: the typecheck/lint/test/build commands plus structural checks on the stage artifact. No validator sub-agent. The inferential safety net for code is the `reviewer` agent itself — it reads the actual source in the REVIEW stage, a stronger check than re-reading `progress.md` prose. The REVIEW deterministic check then routes the reviewer's recorded verdict.
 
-### Discipline (when invoked inline from `/harness:run`)
+### Discipline
 
 This procedure runs inside `/harness:run`'s tight tool-driven loop. The same **0-character output budget between tool calls** rule applies: the only user-visible text is the literal `messages.*` strings the procedure mandates and the deterministic results table. No greetings, no plan announcements, no summaries of intermediate Reads, no "I will now run typecheck…" narration. Read → Bash → … → Edit, with mandated message prints inserted only where the procedure says so.
 
@@ -231,9 +228,7 @@ Update `state.json` (Edit):
 
 Print `messages.validation_passed` populated with `<prev>` and `<next>`.
 
-Only when invoked directly (`/harness:validate` standalone), also print `messages.next_hint`.
-
-Omit `messages.next_hint` when called inline within the `/harness:run` loop — run will continue the loop automatically.
+Do not print any "next step" hint — `/harness:run` continues the loop automatically.
 
 ### 5b. FAIL handling
 
@@ -296,18 +291,13 @@ If `new iteration >= maxRetries`, additionally print `messages.retry_limit_reach
 
 ### `parse_error`
 
-- **en**: `Validator returned malformed output (no VALIDATION_RESULT line). Treating as runtime error; iteration not incremented. Re-run /harness:validate or /harness:run to retry.`
-- **ko**: `검증 에이전트 출력이 형식에 맞지 않습니다(VALIDATION_RESULT 라인 없음). 런타임 오류로 처리하며 iteration은 증가하지 않습니다. /harness:validate 또는 /harness:run을 다시 실행해 재시도하세요.`
+- **en**: `Validator returned malformed output (no VALIDATION_RESULT line). Treating as runtime error; iteration not incremented. Re-run /harness:run to retry.`
+- **ko**: `검증 에이전트 출력이 형식에 맞지 않습니다(VALIDATION_RESULT 라인 없음). 런타임 오류로 처리하며 iteration은 증가하지 않습니다. /harness:run을 다시 실행해 재시도하세요.`
 
 ### `validation_passed`
 
 - **en**: `Validation passed: {prev} -> {next}`
 - **ko**: `검증 통과: {prev} -> {next}`
-
-### `next_hint`
-
-- **en**: `Next: /harness:run    (or /harness:retro if DONE)`
-- **ko**: `다음: /harness:run    (DONE이면 /harness:retro)`
 
 ### `validation_failed`
 
@@ -364,8 +354,8 @@ If `new iteration >= maxRetries`, additionally print `messages.retry_limit_reach
 
 ### `structural_tbd_plan`
 
-- **en**: `Replace all TBD/TODO entries in requirements.md with concrete answers, then re-run /harness:validate`
-- **ko**: `requirements.md의 TBD/TODO 항목을 모두 구체적인 내용으로 교체한 뒤 /harness:validate를 다시 실행하세요`
+- **en**: `Replace all TBD/TODO entries in requirements.md with concrete answers, then re-run /harness:run`
+- **ko**: `requirements.md의 TBD/TODO 항목을 모두 구체적인 내용으로 교체한 뒤 /harness:run을 다시 실행하세요`
 
 ### `structural_no_tasks`
 

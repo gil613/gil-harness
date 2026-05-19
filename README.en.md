@@ -77,9 +77,7 @@ claude --plugin-dir ./gil-harness
 | `/harness:init` | Auto-analyzes the current project → generates `.harness/config.json`, `.harness/state.json` |
 | `/harness:run` | **Implementation cycle auto-loop** — repeats run→validate until DONE or retry limit, no manual input needed |
 | `/harness:analyze` | **Analysis cycle auto-loop** — ANALYSIS→SPECIFICATION→DONE, runs independently of the implementation cycle |
-| `/harness:validate` | Per-stage artifact validation — REQ/ROADMAP use inferential (sub-agent), DEV/REVIEW use deterministic (commands + structural checks) |
 | `/harness:status` | Single-screen progress summary |
-| `/harness:advance` | Force-advance to the next stage skipping validation (emergency use, requires confirmation) |
 | `/harness:reset` | Reset iteration/failures — use after modifying instructions when `maxRetries` is exceeded |
 | `/harness:retro` | Retrospective sub-agent → failure pattern analysis → directly improves agent instructions |
 | `/harness:update` | Apply new plugin version changes to an existing project — fill config.json schema gaps, refresh CLAUDE.md |
@@ -111,15 +109,7 @@ If the previous cycle is in `DONE`, `/harness:run` no longer bails — it auto-r
 
 If `.harness/agents-overrides/<subagent>.md` exists, the retrospective-generated project-local instructions are automatically inlined into the prompt.
 
-### `/harness:validate`
-
-Reviews artifacts per stage.
-
-- **REQUIREMENTS / ROADMAP**: structural pre-checks (Bash) + **inferential validation** — a validator sub-agent (`requirements-validator`, `roadmap-validator`) judges artifact quality.
-- **DEVELOPMENT / REVIEW**: **deterministic only** — runs `typecheckCmd → lintCmd → testCmd → buildCmd` plus structural checks on the artifact (`progress.md` / `review-report.md`). No validator sub-agent. The semantic check for code is the `reviewer` agent, which reads the actual source in the REVIEW stage — a stronger check than re-reading `progress.md` prose. The REVIEW deterministic check then parses the reviewer's recorded verdict (Critical/Major findings, Final Verdict) and routes accordingly.
-
-PASS → advance to next stage + reset `iteration=0`, `failures=[]`, update `lastValidated`.
-FAIL → `iteration += 1`, append to `failures` array (capped at 20 most recent). A REVIEW failure that needs code changes regresses to DEVELOPMENT.
+Per-stage validation runs automatically inside `/harness:run` (procedure defined in `docs/validate.md`) — there is no separate validation command. See the "Validation Gates" section below for how it works.
 
 ### `/harness:status`
 
@@ -139,10 +129,6 @@ Completed:
   REQUIREMENTS — 2026-04-26
   ROADMAP      — 2026-04-27
 ```
-
-### `/harness:advance`
-
-Force-advances to the next stage without validation. Records `skippedValidation: true` in `history`. Asks the user for explicit confirmation before proceeding.
 
 ### `/harness:reset`
 
@@ -312,6 +298,7 @@ gil-harness/
 ├── .claude-plugin/plugin.json
 ├── marketplace.json
 ├── docs/
+│   ├── validate.md                  ← validation procedure (inlined by run.md, not a slash command)
 │   └── agent-system-prompt/
 │       ├── base.md                  ← common instructions injected into all agents
 │       └── roles/                   ← role-specific additional instructions
@@ -330,9 +317,7 @@ gil-harness/
     ├── init.md
     ├── run.md
     ├── analyze.md
-    ├── validate.md
     ├── status.md
-    ├── advance.md
     ├── reset.md
     └── retro.md
 ```

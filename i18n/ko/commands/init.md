@@ -133,7 +133,7 @@ allowed-tools: Bash, Read, Write, Edit, Glob
 
 **디렉터리 사전 생성** (양 모드에서 멱등):
 
-- `.harness/logs/` — 결정론 검증 로그 보관소 (`/harness:validate`가 첫 실행 시 사용)
+- `.harness/logs/` — 결정론 검증 로그 보관소 (`/harness:run`의 검증 단계가 첫 실행 시 사용)
 
 `mkdir` 호출 시 반드시 **따옴표로 감싼 상대경로** 사용:
 
